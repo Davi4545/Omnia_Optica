@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>OMNIA Ótica — Entrar</title>
+<meta name="theme-color" content="#eef1f6"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="icon" href="icon.svg" type="image/svg+xml"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/omnia.css"/>
+</head>
+<body data-theme="refracao">
+<div class="authCard">
+  <div style="text-align:center;margin-bottom:22px">
+    <div class="logoLens" style="width:64px;height:64px;margin:0 auto 12px"></div>
+    <h1 style="font-family:var(--font-display);font-size:34px;font-weight:800">OMNIA</h1>
+    <div class="hint">Sistema para óticas</div>
+  </div>
+  <div class="card">
+    <div class="cardBody">
+      <div class="tabs" style="margin-bottom:16px">
+        <button class="tab active" id="tabLogin">Entrar</button>
+        <button class="tab" id="tabSignup">Criar conta</button>
+      </div>
+
+      <div id="formLogin">
+        <div class="field" style="margin-bottom:10px"><label>E-mail</label><input id="li_email" type="email" autocomplete="email" placeholder="voce@email.com"/></div>
+        <div class="field" style="margin-bottom:14px"><label>Senha</label><input id="li_pass" type="password" autocomplete="current-password" placeholder="••••••••"/></div>
+        <button class="btn primary" id="btnLogin" style="width:100%;justify-content:center"><span>Entrar</span></button>
+        <button class="btn ghost sm" id="btnForgot" style="width:100%;justify-content:center;margin-top:8px">Esqueci minha senha</button>
+      </div>
+
+      <div id="formSignup" style="display:none">
+        <div class="field" style="margin-bottom:10px"><label>Nome</label><input id="su_nome" placeholder="Seu nome"/></div>
+        <div class="field" style="margin-bottom:10px"><label>E-mail</label><input id="su_email" type="email" placeholder="voce@email.com"/></div>
+        <div class="field" style="margin-bottom:10px"><label>Senha</label><input id="su_pass" type="password" placeholder="mín. 6 caracteres"/></div>
+        <div class="field" style="margin-bottom:14px"><label>Código da ótica</label><input id="su_code" placeholder="Peça ao gestor"/></div>
+        <button class="btn go" id="btnSignup" style="width:100%;justify-content:center">Criar conta</button>
+      </div>
+
+      <div class="hint" id="authMsg" style="margin-top:14px;text-align:center;min-height:20px"></div>
+    </div>
+  </div>
+</div>
+<script type="module" src="js/login.js"></script>
+<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js");</script></body>
+</html>

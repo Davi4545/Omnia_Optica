@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>OMNIA Ótica — Clientes</title><meta name="theme-color" content="#eef1f6"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="icon" href="icon.svg" type="image/svg+xml"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/omnia.css"/>
+</head>
+<body data-theme="refracao">
+<header id="appHeader"></header>
+<main class="wrap">
+  <div id="loading" class="loadWrap"><div class="spinner"></div><div>Carregando clientes…</div></div>
+  <div id="appBody" style="display:none;padding-top:16px">
+    <div class="kpis" id="cliKpis" style="margin-bottom:18px"></div>
+    <div class="card">
+      <div class="cardHead"><div><span class="eyebrow">CRM da ótica</span><h2>Clientes</h2></div>
+        <button class="btn primary" id="btnNovoCliente"><span>+ Novo cliente</span></button></div>
+      <div class="cardBody">
+        <div class="tools" style="margin-bottom:14px"><input class="search" id="cliSearch" placeholder="Buscar por nome ou telefone…"/></div>
+        <div id="cliTable"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="modalBack" id="cliBack">
+  <div class="modal">
+    <div class="modalHead"><h3 id="cliTitle">Novo cliente</h3><button class="btn ghost icon" data-close="cliBack">✕</button></div>
+    <div class="modalBody">
+      <input type="hidden" id="cli_id"/>
+      <div class="frow"><div class="field"><label>Nome</label><input id="cli_nome" placeholder="Nome"/></div>
+        <div class="field"><label>Telefone</label><input id="cli_tel" inputmode="tel" placeholder="(00) 00000-0000"/></div></div>
+      <div class="frow"><div class="field"><label>Nascimento</label><input id="cli_nasc" type="date"/></div>
+        <div class="field"><label>Etapa</label><select id="cli_etapa"><option value="lead">Lead</option><option value="negociacao">Em negociação</option><option value="fechado">Cliente</option></select></div></div>
+      <div class="frow"><div class="field"><label>Próximo retorno (recompra/revisão)</label><input id="cli_prox" type="date"/></div>
+        <div class="field"><label>Consultor</label><select id="cli_owner"></select></div></div>
+      <div class="field full"><label>Observação</label><input id="cli_obs" placeholder="Preferências, receita, histórico…"/></div>
+      <div id="cli_hist" class="hint"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+        <button class="btn stop sm" id="btnDeleteCli" style="margin-right:auto;display:none">Excluir</button>
+        <button class="btn wa sm" id="btnWaCli">WhatsApp</button>
+        <button class="btn ghost sm" data-close="cliBack">Cancelar</button>
+        <button class="btn primary sm" id="btnSaveCli"><span>Salvar</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+<script type="module" src="js/app-crm.js"></script>
+<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js");</script></body>
+</html>
