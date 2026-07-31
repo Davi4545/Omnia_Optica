@@ -46,9 +46,27 @@
         <div class="cardHead"><div><span class="eyebrow">Acesso ao sistema</span><h2>Usuários da ótica</h2></div>
           <button class="btn ghost sm" id="btnRecarregarUsers">Recarregar</button></div>
         <div class="cardBody">
-          <div class="hint" style="margin-bottom:12px">
-            Novos consultores criam a conta sozinhos em <b>login.html</b> usando o código de acesso da ótica.
-            Aqui você define o papel de cada um e pode desativar quem saiu.
+          <div class="kpis" id="userKpis" style="margin-bottom:16px"></div>
+
+          <div class="inviteBox">
+            <div>
+              <div class="inviteTit">Convite para a equipe</div>
+              <div class="inviteSub">Quem abrir este link já chega com o código preenchido.</div>
+              <code class="inviteLink" id="inviteLink">—</code>
+            </div>
+            <button class="btn primary sm" id="btnCopiarConvite"><span>Copiar link</span></button>
+          </div>
+
+          <div class="tools" style="margin:16px 0 12px">
+            <input class="search" id="userSearch" placeholder="Buscar por nome ou e-mail…"/>
+            <select id="userFiltro" style="padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:14px">
+              <option value="todos">Todos</option>
+              <option value="ativos">Somente ativos</option>
+              <option value="inativos">Somente inativos</option>
+              <option value="gestores">Gestores</option>
+              <option value="semvinculo">Sem consultor vinculado</option>
+            </select>
+            <button class="btn ghost sm" id="btnRecarregarUsers">Recarregar</button>
           </div>
           <div id="usersBox"></div>
         </div>
@@ -65,6 +83,64 @@
     </section>
   </div>
 </main>
+
+<!-- MODAL: editar usuário -->
+<div class="modalBack" id="userBack">
+  <div class="modal">
+    <div class="modalHead"><h3 id="userTitle">Usuário</h3><button class="btn ghost icon" data-close="userBack">✕</button></div>
+    <div class="modalBody">
+      <input type="hidden" id="u_uid"/>
+      <div class="userHead">
+        <div class="avatar" id="u_ini">?</div>
+        <div style="min-width:0">
+          <div id="u_nome" style="font-weight:700;font-size:15px"></div>
+          <div id="u_email" class="hint" style="text-transform:none"></div>
+          <div id="u_acesso" class="tiny" style="margin-top:4px"></div>
+        </div>
+      </div>
+
+      <div class="sectionLabel">Acesso</div>
+      <div class="frow">
+        <div class="field"><label>Papel</label>
+          <select id="u_role">
+            <option value="seller">Consultor</option>
+            <option value="admin">Gestor</option>
+          </select>
+          <span class="hint" id="u_roleHint"></span>
+        </div>
+        <div class="field"><label>Situação</label>
+          <select id="u_active"><option value="true">Ativo</option><option value="false">Inativo</option></select>
+          <span class="hint">Inativo perde o acesso na hora.</span>
+        </div>
+      </div>
+
+      <div class="sectionLabel">Ótica</div>
+      <div class="field"><label>Ótica principal</label>
+        <select id="u_store"></select>
+        <span class="hint" id="u_storeHint"></span></div>
+      <div class="field"><label>Acesso adicional a outras óticas</label>
+        <div class="chips" id="u_stores"></div>
+        <span class="hint">Marque para liberar a troca de ótica no topo do sistema.</span></div>
+
+      <div class="sectionLabel">Vínculo operacional</div>
+      <div class="field"><label>Consultor da lista da vez</label>
+        <select id="u_seller"></select>
+        <span class="hint">Liga esta conta ao consultor que aparece na fila de atendimento.</span></div>
+
+      <div class="sectionLabel">Senha</div>
+      <div class="resetBox">
+        <div><div style="font-weight:600;font-size:13px">Esqueceu a senha?</div>
+          <div class="hint">Enviamos um link de redefinição para o e-mail dele.</div></div>
+        <button class="btn ghost sm" id="btnResetSenha">Enviar link</button>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+        <button class="btn ghost sm" data-close="userBack">Cancelar</button>
+        <button class="btn primary sm" id="btnSalvarUser"><span>Salvar alterações</span></button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL: nova ótica -->
 <div class="modalBack" id="lojaBack">
