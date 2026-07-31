@@ -79,11 +79,15 @@ service cloud.firestore {
                     && request.resource.data.get('active', true)   == resource.data.get('active', true)
                     && request.resource.data.get('storeId', '')    == resource.data.get('storeId', '');
 
-      // gestor gerencia usuários da própria loja; super admin, qualquer um
+      // gestor gerencia usuários da própria loja; super admin, qualquer um.
+      // O gestor NÃO pode transferir alguém para outra ótica (storeId travado):
+      // só o super admin move pessoas entre lojas.
       allow update: if authed() && isActive() && (
         isSuper() ||
-        (isAdmin() && resource.data.get('storeId', '') == p().get('storeId', '')
-                   && request.resource.data.get('role', 'seller') != 'superadmin')
+        (isAdmin()
+          && resource.data.get('storeId', '') == p().get('storeId', '')
+          && request.resource.data.get('storeId', '') == resource.data.get('storeId', '')
+          && request.resource.data.get('role', 'seller') != 'superadmin')
       );
 
       allow delete: if isSuper();
