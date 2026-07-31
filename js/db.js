@@ -31,6 +31,13 @@ export async function updateStore(storeId, data) {
   await setDoc(doc(db, "stores", storeId), data, { merge: true });
 }
 
+// Lista TODOS os usuários — apenas super admin passa nas regras.
+// Usado para localizar alguém que ainda está em outra ótica.
+export async function listAllUsers() {
+  const qs = await getDocs(collection(db, "users"));
+  return qs.docs.map((d) => ({ uid: d.id, ...d.data() }));
+}
+
 // Cria uma loja (apenas super admin, conforme as regras)
 export async function createStore(storeId, data) {
   await setDoc(doc(db, "stores", storeId), data, { merge: true });
