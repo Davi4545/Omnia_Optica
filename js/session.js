@@ -4,7 +4,7 @@
 import { auth, SUPER_ADMIN_EMAIL } from "./firebase.js";
 import { onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getUserProfile, getStore, listStores, updateUserProfile } from "./db.js";
-import { esc } from "./utils.js";
+import { esc, mostrarFalha } from "./utils.js";
 
 const NAV = [
   { key: "ops",        href: "index.html",       label: "Atendimento" },
@@ -59,8 +59,42 @@ async function resolveStoreId(profile) {
  * Garante sessão e monta o shell. Retorna { user, profile, storeId, store }.
  * Redireciona para login se não autenticado.
  */
+// Traduz o erro do Firestore em algo que a pessoa consiga resolver
+function explicaErro(d) {
+  const c = (d.code || "") + " " + (d.message || "");
+  if (c.includes("permission-denied"))
+    return ["Sem permissão para ler os dados",
+      "Publique o arquivo firestore.rules no Console do Firebase e confira se o seu usuário tem o campo storeId preenchido."];
+  if (c.includes("unavailable") || c.includes("network"))
+    return ["Sem conexão com o servidor", "Verifique sua internet e tente de novo."];
+  if (c.includes("failed-precondition"))
+    return ["O banco precisa de um índice", "Abra o console do navegador (F12): o Firebase mostra um link para criar o índice automaticamente."];
+  return ["Não foi possível carregar os dados", d.message || "Tente novamente em instantes."];
+}
+
+// Vigia: se nada aparecer em 12s, avisa em vez de girar para sempre
+function armarVigia() {
+  setTimeout(() => {
+    const body = document.getElementById("appBody");
+    const load = document.getElementById("loading");
+    if (body && body.style.display === "none" && load && load.style.display !== "none") {
+      mostrarFalha("Está demorando mais que o normal",
+        "Os dados não chegaram. Verifique a conexão e se as regras do Firestore foram publicadas.");
+    }
+  }, 12000);
+}
+
 export function initShell(activeKey) {
   applyTema();
+  // Falha em qualquer assinatura de dados vira mensagem, não tela travada
+  if (!window.__omniaErroLigado) {
+    window.__omniaErroLigado = true;
+    window.addEventListener("omnia:erro-dados", (ev) => {
+      const [t, d] = explicaErro(ev.detail || {});
+      mostrarFalha(t, d);
+    });
+  }
+  armarVigia();
   let resolvido = false; // onAuthStateChanged dispara de novo ao renovar o token
   return new Promise((resolve) => {
     onAuthStateChanged(auth, async (user) => {
