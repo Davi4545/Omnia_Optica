@@ -1,0 +1,26 @@
+{
+  "name": "OMNIA Ótica",
+  "short_name": "OMNIA",
+  "description": "Sistema de gestão para óticas — atendimento, laboratório, CRM, catálogo, comissão e ponto.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "id": "omnia-otica",
+  "display": "standalone",
+  "background_color": "#0f1624",
+  "theme_color": "#eef1f6",
+  "orientation": "any",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "./icon.svg",              "sizes": "any",     "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./icon-192.png",          "sizes": "192x192", "type": "image/png",     "purpose": "any" },
+    { "src": "./icon-512.png",          "sizes": "512x512", "type": "image/png",     "purpose": "any" },
+    { "src": "./icon-maskable-512.png", "sizes": "512x512", "type": "image/png",     "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Atendimento", "short_name": "Atender",  "url": "./index.html" },
+    { "name": "Laboratório", "short_name": "Lab",      "url": "./laboratorio.html" },
+    { "name": "Clientes",    "short_name": "Clientes", "url": "./clientes.html" }
+  ]
+}

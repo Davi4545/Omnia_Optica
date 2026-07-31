@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>OMNIA Ótica — Gestão</title><meta name="theme-color" content="#eef1f6"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="icon" href="icon.svg" type="image/svg+xml"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/omnia.css"/>
+</head>
+<body data-theme="refracao">
+<header id="appHeader"></header>
+<main class="wrap">
+  <div id="loading" class="loadWrap"><div class="spinner"></div><div>Carregando gestão…</div></div>
+  <div id="appBody" style="display:none;padding-top:16px">
+
+    <div class="tabs" id="admTabs" style="margin-bottom:18px">
+      <button class="tab active" data-adm="loja">Minha ótica</button>
+      <button class="tab" data-adm="usuarios">Usuários</button>
+      <button class="tab" data-adm="lojas" id="tabLojas" style="display:none">Todas as óticas</button>
+    </div>
+
+    <!-- MINHA ÓTICA -->
+    <section id="admLoja">
+      <div class="card">
+        <div class="cardHead"><div><span class="eyebrow">Dados da ótica</span><h2 id="lojaNome">—</h2></div>
+          <button class="btn go sm" id="btnSalvarLoja">Salvar</button></div>
+        <div class="cardBody">
+          <div class="frow">
+            <div class="field"><label>Nome da ótica</label><input id="lj_nome" placeholder="Ex: Ótica Visão Clara"/></div>
+            <div class="field"><label>Código de acesso (para novos consultores)</label><input id="lj_code" placeholder="ex: visaoclara"/></div>
+          </div>
+          <div class="hint" id="codeHint" style="margin-top:8px"></div>
+          <div class="field full" style="margin-top:12px"><label>Logo (opcional)</label>
+            <input id="lj_logo_inp" type="file" accept="image/*"/>
+            <img id="lj_logo_prev" class="fotoPrev" alt="" style="display:none"/>
+            <span class="hint">A imagem é reduzida automaticamente antes de salvar.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- USUÁRIOS -->
+    <section id="admUsuarios" style="display:none">
+      <div class="card">
+        <div class="cardHead"><div><span class="eyebrow">Acesso ao sistema</span><h2>Usuários da ótica</h2></div>
+          <button class="btn ghost sm" id="btnRecarregarUsers">Recarregar</button></div>
+        <div class="cardBody">
+          <div class="hint" style="margin-bottom:12px">
+            Novos consultores criam a conta sozinhos em <b>login.html</b> usando o código de acesso da ótica.
+            Aqui você define o papel de cada um e pode desativar quem saiu.
+          </div>
+          <div id="usersBox"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TODAS AS ÓTICAS (super admin) -->
+    <section id="admLojas" style="display:none">
+      <div class="card">
+        <div class="cardHead"><div><span class="eyebrow">Super admin</span><h2>Todas as óticas</h2></div>
+          <button class="btn primary" id="btnNovaLoja"><span>+ Nova ótica</span></button></div>
+        <div class="cardBody"><div id="lojasBox"></div></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- MODAL: nova ótica -->
+<div class="modalBack" id="lojaBack">
+  <div class="modal">
+    <div class="modalHead"><h3>Nova ótica</h3><button class="btn ghost icon" data-close="lojaBack">✕</button></div>
+    <div class="modalBody">
+      <div class="field"><label>Nome da ótica</label><input id="nl_nome" placeholder="Ex: Ótica Central"/></div>
+      <div class="field"><label>Código de acesso</label><input id="nl_code" placeholder="ex: central"/>
+        <span class="hint">Os consultores digitam este código ao criar a conta.</span></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+        <button class="btn ghost sm" data-close="lojaBack">Cancelar</button>
+        <button class="btn primary sm" id="btnCriarLoja"><span>Criar ótica</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/app-admin.js"></script>
+<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js");</script>
+</body>
+</html>

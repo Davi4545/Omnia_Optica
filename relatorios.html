@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>OMNIA Ótica — Relatórios</title><meta name="theme-color" content="#eef1f6"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="icon" href="icon.svg" type="image/svg+xml"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/omnia.css"/>
+</head>
+<body data-theme="refracao">
+<header id="appHeader"></header>
+<main class="wrap">
+  <div id="loading" class="loadWrap"><div class="spinner"></div><div>Carregando relatórios…</div></div>
+  <div id="appBody" style="display:none;padding-top:16px">
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="cardBody" style="padding-top:16px">
+        <div class="tools">
+          <div class="field" style="max-width:180px"><label>Período</label>
+            <select id="periodo">
+              <option value="hoje">Hoje</option>
+              <option value="7">Últimos 7 dias</option>
+              <option value="30">Últimos 30 dias</option>
+              <option value="mes" selected>Mês atual</option>
+              <option value="mesant">Mês anterior</option>
+              <option value="custom">Personalizado…</option>
+            </select></div>
+          <div class="field" style="max-width:160px" id="wrapDe"><label>De</label><input id="dtDe" type="date"/></div>
+          <div class="field" style="max-width:160px" id="wrapAte"><label>Até</label><input id="dtAte" type="date"/></div>
+          <div class="field" style="max-width:200px"><label>Consultor</label><select id="filtroSeller"></select></div>
+          <button class="btn ghost sm" id="btnExportRel" style="align-self:flex-end">Exportar CSV</button>
+        </div>
+        <div class="hint" id="periodoLabel" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <div class="kpis" id="relKpis" style="margin-bottom:18px"></div>
+
+    <div class="tabs" id="relTabs" style="margin-bottom:18px">
+      <button class="tab active" data-rel="resumo">Resumo</button>
+      <button class="tab" data-rel="consultores">Consultores</button>
+      <button class="tab" data-rel="produtos">Produtos</button>
+      <button class="tab" data-rel="perdas">Não convertidos</button>
+      <button class="tab" data-rel="lab">Laboratório</button>
+    </div>
+
+    <section id="relResumo"><div class="card"><div class="cardBody" id="boxResumo"></div></div></section>
+    <section id="relConsultores" style="display:none"><div class="card"><div class="cardBody" id="boxConsultores"></div></div></section>
+    <section id="relProdutos" style="display:none"><div class="card"><div class="cardBody" id="boxProdutos"></div></div></section>
+    <section id="relPerdas" style="display:none"><div class="card"><div class="cardBody" id="boxPerdas"></div></div></section>
+    <section id="relLab" style="display:none"><div class="card"><div class="cardBody" id="boxLab"></div></div></section>
+  </div>
+</main>
+<script type="module" src="js/app-relatorios.js"></script>
+<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js");</script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+rules_version = '2';
+
+// ============================================================
+// OMNIA Ótica — Regras de segurança do Firestore
+//
+// Princípios:
+//  - Nenhuma função assume que o perfil existe (exists() antes de get())
+//  - Super admin é validado pelo E-MAIL DO TOKEN (não forjável no cliente)
+//  - Todo acesso a dados de loja exige vínculo comprovado no perfil
+//  - Consulta de código de loja é um GET pontual (nunca listagem)
+// ============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- identidade ----------
+    function authed() { return request.auth != null; }
+    function uid()    { return request.auth.uid; }
+    function email()  { return request.auth.token.email; }
+
+    // Super admin verificado pelo token do Firebase Auth (confiável)
+    function isSuper() {
+      return authed() && email() == 'davi.vieira.each@gmail.com';
+    }
+
+    // ---------- perfil (sempre com verificação de existência) ----------
+    function hasProfile() {
+      return authed() && exists(/databases/$(database)/documents/users/$(uid()));
+    }
+    function p() {
+      return get(/databases/$(database)/documents/users/$(uid())).data;
+    }
+    function role() {
+      return hasProfile() ? p().get('role', 'seller') : 'none';
+    }
+    function isActive() {
+      return isSuper() || (hasProfile() && p().get('active', true) != false);
+    }
+    function isAdmin() {
+      return isSuper() || role() == 'admin' || role() == 'superadmin';
+    }
+
+    // usuário pertence a esta loja?
+    function member(storeId) {
+      return isSuper() || (hasProfile() && (
+        p().get('storeId', '') == storeId ||
+        storeId in p().get('storeIds', [])
+      ));
+    }
+
+    // porta de entrada para qualquer dado de loja
+    function ok(storeId) {
+      return authed() && isActive() && member(storeId);
+    }
+
+    // ---------- /users ----------
+    match /users/{userId} {
+      // o próprio usuário, ou um gestor da mesma loja
+      allow get: if authed() && (
+        uid() == userId || isSuper() ||
+        (isAdmin() && resource.data.get('storeId', '') == p().get('storeId', ''))
+      );
+      // Listagem: o Firestore rejeita a consulta se algum documento retornado
+      // não passar nesta regra — na prática, obriga a consulta a filtrar por
+      // storeId, impedindo que um gestor liste usuários de outra ótica.
+      allow list: if authed() && isActive() && (
+        isSuper() ||
+        (isAdmin() && resource.data.get('storeId', '') == p().get('storeId', ''))
+      );
+
+      // criação: só o próprio usuário, sempre como vendedor comum
+      allow create: if authed() && uid() == userId
+                    && request.resource.data.get('role', 'seller') == 'seller'
+                    && request.resource.data.get('active', true) == true;
+
+      // atualização própria: NÃO pode mudar papel, status nem loja
+      allow update: if authed() && uid() == userId
+                    && request.resource.data.get('role', 'seller') == resource.data.get('role', 'seller')
+                    && request.resource.data.get('active', true)   == resource.data.get('active', true)
+                    && request.resource.data.get('storeId', '')    == resource.data.get('storeId', '');
+
+      // gestor gerencia usuários da própria loja; super admin, qualquer um
+      allow update: if authed() && isActive() && (
+        isSuper() ||
+        (isAdmin() && resource.data.get('storeId', '') == p().get('storeId', '')
+                   && request.resource.data.get('role', 'seller') != 'superadmin')
+      );
+
+      allow delete: if isSuper();
+    }
+
+    // ---------- /storeCodes/{code} -> { storeId } ----------
+    // Consulta pontual usada no cadastro. Nunca listável.
+    match /storeCodes/{code} {
+      allow get:   if authed();
+      allow list:  if false;
+      allow write: if authed() && isActive() && isAdmin();
+    }
+
+    // ---------- /stores ----------
+    match /stores/{storeId} {
+      allow get:    if ok(storeId);
+      allow list:   if isSuper();
+      allow create: if isSuper();
+      allow update: if ok(storeId) && isAdmin();
+      allow delete: if isSuper();
+
+      // -- app/state: estado operacional em tempo real --
+      match /app/{doc} {
+        allow read:  if ok(storeId);
+        allow write: if ok(storeId);
+      }
+
+      // -- records: atendimentos e vendas --
+      match /records/{recId} {
+        allow read:   if ok(storeId);
+        allow create: if ok(storeId);
+        allow update: if ok(storeId) && isAdmin();
+        allow delete: if ok(storeId) && isAdmin();
+      }
+
+      // -- clientes: CRM --
+      match /clientes/{cliId} {
+        allow read:   if ok(storeId);
+        allow create: if ok(storeId);
+        allow update: if ok(storeId);
+        allow delete: if ok(storeId) && isAdmin();
+      }
+
+      // -- os: ordens de serviço do laboratório --
+      match /os/{osId} {
+        allow read:   if ok(storeId);
+        allow create: if ok(storeId);
+        allow update: if ok(storeId);
+        allow delete: if ok(storeId) && isAdmin();
+      }
+
+      // -- ponto --
+      match /ponto/{pontoId} {
+        allow read:   if ok(storeId);
+        allow create: if ok(storeId);
+        allow update: if ok(storeId);
+        allow delete: if ok(storeId) && isAdmin();
+      }
+
+      // -- produtos: catálogo (só gestor edita) --
+      match /produtos/{prodId} {
+        allow read:  if ok(storeId);
+        allow write: if ok(storeId) && isAdmin();
+      }
+
+      // -- comissaoConfig (só gestor edita) --
+      match /comissaoConfig/{doc} {
+        allow read:  if ok(storeId);
+        allow write: if ok(storeId) && isAdmin();
+      }
+
+      // -- vendedores: perfil público do consultor --
+      match /vendedores/{vendId} {
+        allow read:  if ok(storeId);
+        allow write: if ok(storeId) && (uid() == vendId || isAdmin());
+      }
+    }
+
+    // ---------- nada mais é acessível ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
