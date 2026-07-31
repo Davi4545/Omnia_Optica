@@ -20,6 +20,17 @@ function trava(v) {
   ["btnLogin", "btnSignup"].forEach((id) => { const b = $(id); if (b) b.disabled = v; });
 }
 
+// Link de convite: login.html?code=visaoclara já abre em "Criar conta"
+(function convite() {
+  const code = new URLSearchParams(location.search).get("code");
+  if (!code) return;
+  $("su_code").value = code;
+  $("tabSignup").classList.add("active"); $("tabLogin").classList.remove("active");
+  $("formSignup").style.display = "block"; $("formLogin").style.display = "none";
+  msg("Convite reconhecido. Preencha seus dados para criar a conta.", "ok");
+  setTimeout(() => $("su_nome").focus(), 100);
+})();
+
 // Se já está logado, entra direto
 onAuthStateChanged(auth, (u) => { if (u && !ocupado) go(); });
 
