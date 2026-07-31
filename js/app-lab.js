@@ -23,13 +23,32 @@ async function init() {
   wireEvents();
   subscribeState(STORE, (st) => { sellers = (st && st.sellers) || []; labs = (st && st.labs) || labs; });
   subscribeOS(STORE, (list) => {
-    osList = list;
+    osList = list.map(normalizaOS);
     labs = [...new Set([...(labs || []), ...list.map((o) => o.laboratorio).filter(Boolean)])];
-    reveal(); renderLab();
+    reveal();
+    try { renderLab(); }
+    catch (e) { console.error("renderLab", e); toast("Alguns dados de OS estão incompletos."); }
     checkPrefill();
   });
 }
 function reveal() { $("loading").style.display = "none"; $("appBody").style.display = "block"; }
+
+// Documento vindo do banco pode estar incompleto (versão antiga, gravação parcial,
+// edição manual no Console). Garantimos a forma antes de qualquer render.
+function normalizaOS(o) {
+  return {
+    ...o,
+    status: o.status || "aberta",
+    numero: Number(o.numero || 0),
+    clienteNome: o.clienteNome || "",
+    receita: o.receita || null,
+    armacao: o.armacao || {},
+    lente: o.lente || {},
+    laboratorio: o.laboratorio || "",
+    valores: { armacao: 0, lente: 0, total: 0, sinal: 0, saldo: 0, ...(o.valores || {}) },
+    datas: { entrada: "", previsao: "", entrega: "", ...(o.datas || {}) }
+  };
+}
 
 function osAtrasada(o) { return o.datas && o.datas.previsao && o.datas.previsao < dateKey() && o.status !== "entregue"; }
 
@@ -131,7 +150,7 @@ async function salvarOS() {
   if (osEditId) {
     o = osList.find((x) => x.id === osEditId) || { id: osEditId };
     o = { ...o, ...dados, status: $("os_status").value, datas: { ...(o.datas || {}), previsao: $("os_prev").value } };
-    if (o.status === "entregue" && !o.datas.entrega) o.datas.entrega = dateKey();
+    if (o.status === "entregue" && !(o.datas && o.datas.entrega)) o.datas = { ...(o.datas || {}), entrega: dateKey() };
   } else {
     const numero = (osList.reduce((m, x) => Math.max(m, x.numero || 0), 0)) + 1;
     o = { id: "os_" + uid(), numero, status: "aberta", datas: { entrada: dateKey(), previsao: $("os_prev").value, entrega: "" }, criadoEm: Date.now(), ...dados };
