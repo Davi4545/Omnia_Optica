@@ -87,11 +87,11 @@ export async function deleteStoreCode(code) {
 // ---------- tratamento de falha nas assinaturas ----------
 // Sem isto, uma leitura negada pelas regras faz o onSnapshot falhar em silêncio:
 // o callback de sucesso nunca roda e a tela fica presa no "carregando".
-function erroDados(origem, e) {
-  console.error("Firestore [" + origem + "]:", e);
+function erroDados(origem, e, storeId) {
+  console.error("Firestore [" + origem + "] loja=" + storeId + ":", e);
   try {
     window.dispatchEvent(new CustomEvent("omnia:erro-dados", {
-      detail: { origem, code: (e && e.code) || "", message: (e && e.message) || "" }
+      detail: { origem, storeId: storeId || "", code: (e && e.code) || "", message: (e && e.message) || "" }
     }));
   } catch (_) { /* ambiente sem window */ }
 }
@@ -101,7 +101,7 @@ const stateRef = (storeId) => doc(db, "stores", storeId, "app", "state");
 export function subscribeState(storeId, cb) {
   return onSnapshot(stateRef(storeId),
     (snap) => cb(snap.exists() ? snap.data() : null),
-    (e) => erroDados("app/state", e));
+    (e) => erroDados("app/state", e, storeId));
 }
 export async function saveState(storeId, stateObj) {
   await setDoc(stateRef(storeId), { ...stateObj, _updatedAt: Date.now() }, { merge: false });
@@ -112,7 +112,7 @@ const col = (storeId, name) => collection(db, "stores", storeId, name);
 function subscribeCol(storeId, name, cb) {
   return onSnapshot(col(storeId, name),
     (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
-    (e) => erroDados(name, e));
+    (e) => erroDados(name, e, storeId));
 }
 async function saveDoc(storeId, name, id, data) {
   await setDoc(doc(db, "stores", storeId, name, id), data, { merge: true });
