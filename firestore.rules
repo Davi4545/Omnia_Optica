@@ -147,7 +147,17 @@ service cloud.firestore {
         allow delete: if ok(storeId) && isAdmin();
       }
 
+      // -- pontoConfig: jornada de trabalho (vem do sistema antigo) --
+      match /pontoConfig/{doc} {
+        allow read:  if ok(storeId);
+        allow write: if ok(storeId) && isAdmin();
+      }
+
       // -- produtos: catálogo (só gestor edita) --
+      // ATENÇÃO: nas suas regras antigas era "allow read: if true" (público),
+      // para o cliente abrir o link do catálogo sem login. Aqui exigimos login.
+      // Se você usa esse link com clientes, troque a linha abaixo por:
+      //     allow read: if true;
       match /produtos/{prodId} {
         allow read:  if ok(storeId);
         allow write: if ok(storeId) && isAdmin();
@@ -159,7 +169,9 @@ service cloud.firestore {
         allow write: if ok(storeId) && isAdmin();
       }
 
-      // -- vendedores: perfil público do consultor --
+      // -- vendedores: contato do consultor para o link do catálogo --
+      // Mesma observação do bloco acima: era público antes.
+      // Para o link do cliente voltar a funcionar: allow read: if true;
       match /vendedores/{vendId} {
         allow read:  if ok(storeId);
         allow write: if ok(storeId) && (uid() == vendId || isAdmin());
