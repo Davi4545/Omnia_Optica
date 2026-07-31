@@ -105,3 +105,21 @@ export function downloadBlob(content, filename, type = "text/csv;charset=utf-8;"
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1500);
 }
+
+// Substitui o "carregando" por uma falha explicada, em vez de girar para sempre.
+export function mostrarFalha(titulo, detalhe) {
+  const load = $("loading");
+  if (load) {
+    load.className = "";
+    load.innerHTML = `<div class="card"><div class="cardBody"><div class="empty">
+      <div class="glyph">\u26a0\ufe0f</div><div class="t">${esc(titulo)}</div>
+      <div class="d">${esc(detalhe || "")}</div>
+      <button class="btn ghost sm" style="margin-top:14px" id="btnTentarDeNovo">Tentar de novo</button>
+    </div></div></div>`;
+    load.style.display = "block";
+    const b = $("btnTentarDeNovo");
+    if (b) b.addEventListener("click", () => location.reload());
+  }
+  const body = $("appBody");
+  if (body) body.style.display = "none";
+}
