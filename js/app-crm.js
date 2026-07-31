@@ -13,7 +13,12 @@ async function init() {
   PODE_APAGAR = !!CTX.isAdmin;
   wireModals(); wireEvents();
   subscribeState(STORE, (st) => { sellers = (st && st.sellers) || []; });
-  subscribeClientes(STORE, (list) => { clientes = list; reveal(); render(); });
+  subscribeClientes(STORE, (list) => {
+    // documento incompleto não pode derrubar a tela
+    clientes = list.map((c) => ({ ...c, nome: c.nome || "(sem nome)", compras: c.compras || [], etapa: c.etapa || "lead" }));
+    reveal();
+    try { render(); } catch (e) { console.error("render CRM", e); }
+  });
 }
 function reveal() { $("loading").style.display = "none"; $("appBody").style.display = "block"; }
 
