@@ -82,8 +82,11 @@ self.addEventListener("fetch", (e) => {
   e.respondWith((async () => {
     const cached = await caches.match(req);
     const rede = fetch(req).then((res) => {
+      // o clone precisa ser feito AGORA: se esperarmos o caches.open (assíncrono),
+      // o corpo da resposta já terá sido consumido por quem pediu.
       if (res && res.status === 200 && res.type === "basic") {
-        caches.open(VERSION).then((c) => c.put(req, res.clone()));
+        const copia = res.clone();
+        caches.open(VERSION).then((c) => c.put(req, copia)).catch(() => {});
       }
       return res;
     }).catch(() => cached);
