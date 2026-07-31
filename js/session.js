@@ -1,7 +1,7 @@
 // ============================================================
 // OMNIA Ótica — sessão, guarda de autenticação e shell (header+nav)
 // ============================================================
-import { auth, SUPER_ADMIN_EMAIL } from "./firebase.js";
+import { auth, SUPER_ADMIN_EMAIL, PROJECT_ID } from "./firebase.js";
 import { onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getUserProfile, getStore, listStores, updateUserProfile } from "./db.js";
 import { esc, mostrarFalha } from "./utils.js";
@@ -25,6 +25,19 @@ export function toggleTema() {
 }
 
 function isAdmin(role) { return role === "admin" || role === "superadmin"; }
+
+// Contexto técnico, preenchido durante o login e mostrado se algo falhar.
+const DIAG = { projeto: PROJECT_ID, uid: "", email: "", storeId: "", perfil: "não lido", papel: "" };
+function blocoDiag(d) {
+  return [
+    "projeto: " + DIAG.projeto,
+    "ótica: " + (DIAG.storeId || "?"),
+    "coleção bloqueada: " + ((d && d.origem) || "?"),
+    "perfil users/" + (DIAG.uid || "?") + ": " + DIAG.perfil,
+    "papel: " + (DIAG.papel || "?"),
+    "e-mail: " + (DIAG.email || "?")
+  ].join(" · ");
+}
 
 // Envia link de redefinição de senha. Usado no login e no painel de gestão.
 export async function enviarResetSenha(email) {
@@ -63,8 +76,7 @@ async function resolveStoreId(profile) {
 function explicaErro(d) {
   const c = (d.code || "") + " " + (d.message || "");
   if (c.includes("permission-denied"))
-    return ["Sem permissão para ler os dados",
-      "Publique o arquivo firestore.rules no Console do Firebase e confira se o seu usuário tem o campo storeId preenchido."];
+    return ["Sem permissão para ler os dados", blocoDiag(d)];
   if (c.includes("unavailable") || c.includes("network"))
     return ["Sem conexão com o servidor", "Verifique sua internet e tente de novo."];
   if (c.includes("failed-precondition"))
@@ -77,6 +89,7 @@ function armarVigia() {
   setTimeout(() => {
     const body = document.getElementById("appBody");
     const load = document.getElementById("loading");
+    if (window.__omniaFalhou) return;   // já existe um erro específico na tela
     if (body && body.style.display === "none" && load && load.style.display !== "none") {
       mostrarFalha("Está demorando mais que o normal",
         "Os dados não chegaram. Verifique a conexão e se as regras do Firestore foram publicadas.");
@@ -90,6 +103,7 @@ export function initShell(activeKey) {
   if (!window.__omniaErroLigado) {
     window.__omniaErroLigado = true;
     window.addEventListener("omnia:erro-dados", (ev) => {
+      window.__omniaFalhou = true;   // impede o vigia de apagar esta mensagem
       const [t, d] = explicaErro(ev.detail || {});
       mostrarFalha(t, d);
     });
@@ -101,10 +115,14 @@ export function initShell(activeKey) {
       if (!user) { location.replace("login.html"); return; }
       if (resolvido) return;
 
+      DIAG.uid = user.uid; DIAG.email = user.email || "";
       let profile = null;
       try {
         profile = await getUserProfile(user.uid);
+        DIAG.perfil = profile ? "encontrado" : "NÃO EXISTE";
+        DIAG.papel = profile ? (profile.role || "seller") : "";
       } catch (e) {
+        DIAG.perfil = "LEITURA NEGADA";
         // regras negando leitura do próprio perfil = configuração incorreta
         renderErro("Não foi possível ler seu perfil. Publique as regras do Firestore (firestore.rules).");
         return;
@@ -125,6 +143,8 @@ export function initShell(activeKey) {
       if (!storeId) { renderNoStore(); return; }
 
       localStorage.setItem("omnia_store", storeId);
+      DIAG.storeId = storeId;
+      if (profile) DIAG.papel = profile.role || "seller";
       let store = null;
       try { store = await getStore(storeId); } catch (e) { store = null; }
       if (!store) store = { id: storeId, name: "Ótica" };
