@@ -11,7 +11,11 @@ async function init() {
   $("pontoHoje").textContent = new Date().toLocaleDateString("pt-BR");
   wireEvents();
   subscribeState(STORE, (st) => { sellers = (st && st.sellers) || []; fillSel(); reveal(); render(); });
-  subscribePonto(STORE, (list) => { pontos = list; reveal(); render(); });
+  subscribePonto(STORE, (list) => {
+    pontos = list.map((p) => ({ ...p, nome: p.nome || "—", marc: { entrada: "", intervalo: "", retorno: "", saida: "", ...(p.marc || {}) } }));
+    reveal();
+    try { render(); } catch (e) { console.error("render ponto", e); }
+  });
 }
 function reveal() { $("loading").style.display = "none"; $("appBody").style.display = "block"; }
 function fillSel() {
