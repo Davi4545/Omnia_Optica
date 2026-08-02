@@ -1,5 +1,5 @@
 import { initShell } from "./session.js";
-import { subscribeProdutos, saveProduto, deleteProduto } from "./db.js";
+import { subscribeProdutos, saveProduto, deleteProduto, saveVendedorPublico, getVendedorPublico } from "./db.js";
 import {
   $, esc, uid, money, brNum, num, toast,
   openModal, closeModal, wireModals, comprimirImagem, waLink
@@ -146,6 +146,28 @@ async function excluir() {
   closeModal("prodBack"); toast("Produto excluído.");
 }
 
+/* ---------- link público do consultor ---------- */
+function urlPublica() {
+  const base = location.origin + location.pathname.replace(/catalogo\.html$/, "");
+  return `${base}catalogo-publico.html?loja=${encodeURIComponent(STORE)}&v=${encodeURIComponent(CTX.user.uid)}`;
+}
+async function abrirMeuLink() {
+  let v = null;
+  try { v = await getVendedorPublico(STORE, CTX.user.uid); } catch (_) {}
+  $("lk_nome").value = (v && v.nome) || CTX.profile.name || "";
+  $("lk_wa").value = (v && (v.whatsapp || v.telefone)) || "";
+  $("lk_url").textContent = urlPublica();
+  openModal("linkBack");
+}
+async function salvarContato() {
+  const nome = $("lk_nome").value.trim(), wa = $("lk_wa").value.trim();
+  if (!nome) { toast("Digite seu nome."); return; }
+  try {
+    await saveVendedorPublico(STORE, CTX.user.uid, { nome, whatsapp: wa, atualizadoEm: Date.now() });
+    toast("Contato salvo ✓");
+  } catch (e) { console.error(e); toast("Falha ao salvar o contato."); }
+}
+
 /* ---------- eventos ---------- */
 function wireEvents() {
   $("prodSearch").addEventListener("input", (e) => { busca = e.target.value; render(); });
@@ -162,6 +184,14 @@ function wireEvents() {
   $("prodGrid").addEventListener("click", (e) => {
     const ed = e.target.closest("[data-edit]"); if (ed) { e.stopPropagation(); abrir(ed.dataset.edit); return; }
     const ca = e.target.closest("[data-cart]"); if (ca) { e.stopPropagation(); toggleCart(ca.dataset.cart); return; }
+  });
+
+  $("btnMeuLink").addEventListener("click", abrirMeuLink);
+  $("btnSalvarContato").addEventListener("click", salvarContato);
+  $("btnAbrirLink").addEventListener("click", () => window.open(urlPublica(), "_blank"));
+  $("btnCopiarLink").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(urlPublica()); toast("Link copiado ✓"); }
+    catch (_) { toast("Copie o endereço mostrado acima."); }
   });
 
   $("btnCarrinho").addEventListener("click", () => { renderCartItems(); openModal("cartBack"); });
