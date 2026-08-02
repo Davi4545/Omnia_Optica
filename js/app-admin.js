@@ -1,10 +1,11 @@
 import { initShell, enviarResetSenha } from "./session.js";
 import {
   getStore, listStores, createStore, updateStore, listUsersByStore, listAllUsers,
-  updateUserProfile, setStoreCode, deleteStoreCode, normalizeCode, subscribeState
+  updateUserProfile, setStoreCode, deleteStoreCode, normalizeCode, subscribeState,
+  exportarLoja, saveState, addRecord, saveCliente, saveOS, savePonto, saveProduto, saveFaixas
 } from "./db.js";
 import {
-  $, esc, uid, toast, openModal, closeModal, wireModals, comprimirImagem, num
+  $, esc, uid, toast, openModal, closeModal, wireModals, comprimirImagem, num, downloadBlob, dateKey
 } from "./utils.js";
 
 let CTX, STORE, EU;
@@ -237,6 +238,77 @@ async function resetarSenha() {
   catch (e) { console.error(e); toast("Não foi possível enviar o link."); }
 }
 
+/* ================= BACKUP ================= */
+function nomeArquivo(sufixo, ext) {
+  const l = (loja && loja.name ? loja.name : "otica").toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return `omnia-${l}-${sufixo}-${dateKey()}.${ext}`;
+}
+async function backupJson() {
+  $("backupStatus").textContent = "Lendo os dados…";
+  try {
+    const dump = await exportarLoja(STORE);
+    const falhas = Object.entries(dump).filter(([, v]) => v && v.erro).map(([k]) => k);
+    downloadBlob(JSON.stringify(dump, null, 2), nomeArquivo("backup", "json"), "application/json");
+    const n = ["records", "clientes", "os", "ponto", "produtos"].reduce((a, k) => a + (Array.isArray(dump[k]) ? dump[k].length : 0), 0);
+    $("backupStatus").innerHTML = falhas.length
+      ? `Baixado com <b>${num(n)}</b> registros. Não consegui ler: <b>${esc(falhas.join(", "))}</b> (permissão).`
+      : `Baixado com <b>${num(n)}</b> registros ✓`;
+    toast("Backup gerado ✓");
+  } catch (e) { console.error(e); $("backupStatus").textContent = "Falha ao gerar o backup."; }
+}
+// converte lista de objetos em CSV (ponto e vírgula, padrão pt-BR do Excel)
+function paraCsv(lista) {
+  if (!lista || !lista.length) return "";
+  const cols = [...new Set(lista.flatMap((o) => Object.keys(o)))];
+  const val = (v) => {
+    if (v == null) return "";
+    if (typeof v === "object") return JSON.stringify(v);
+    return String(v);
+  };
+  const linhas = [cols, ...lista.map((o) => cols.map((c) => val(o[c])))];
+  return linhas.map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\r\n");
+}
+async function backupCsv() {
+  $("backupStatus").textContent = "Gerando planilhas…";
+  try {
+    const dump = await exportarLoja(STORE);
+    let n = 0;
+    for (const chave of ["records", "clientes", "os", "ponto", "produtos"]) {
+      const lista = dump[chave];
+      if (!Array.isArray(lista) || !lista.length) continue;
+      downloadBlob(paraCsv(lista), nomeArquivo(chave, "csv"));
+      n++;
+      await new Promise((r) => setTimeout(r, 400)); // o navegador bloqueia downloads em rajada
+    }
+    $("backupStatus").innerHTML = n ? `<b>${n}</b> planilha(s) baixada(s) ✓` : "Não há dados para exportar.";
+  } catch (e) { console.error(e); $("backupStatus").textContent = "Falha ao gerar as planilhas."; }
+}
+async function restaurar() {
+  const f = $("restoreFile").files && $("restoreFile").files[0];
+  if (!f) { toast("Escolha um arquivo primeiro."); return; }
+  let dump;
+  try { dump = JSON.parse(await f.text()); }
+  catch (_) { $("restoreStatus").innerHTML = "<b style='color:var(--stop)'>Arquivo inválido.</b>"; return; }
+  const total = ["records", "clientes", "os", "ponto", "produtos"].reduce((a, k) => a + (Array.isArray(dump[k]) ? dump[k].length : 0), 0);
+  if (!confirm(`Restaurar ${total} registros nesta ótica? Documentos com o mesmo id serão sobrescritos.`)) return;
+
+  $("restoreStatus").textContent = "Restaurando…";
+  let feitos = 0, erros = 0;
+  const grava = async (fn, item) => { try { await fn(STORE, item); feitos++; } catch (_) { erros++; } };
+  try {
+    if (dump.estado) await grava(saveState, dump.estado);
+    if (Array.isArray(dump.comissao) && dump.comissao.length) await grava(saveFaixas, dump.comissao);
+    for (const r of dump.records  || []) await grava(addRecord, r);
+    for (const c of dump.clientes || []) await grava(saveCliente, c);
+    for (const o of dump.os       || []) await grava(saveOS, o);
+    for (const p of dump.ponto    || []) await grava(savePonto, p);
+    for (const p of dump.produtos || []) await grava(saveProduto, p);
+    $("restoreStatus").innerHTML = `Restaurados <b>${num(feitos)}</b> registros${erros ? ` · <b style="color:var(--stop)">${erros} falharam</b>` : " ✓"}`;
+    toast("Restauração concluída");
+  } catch (e) { console.error(e); $("restoreStatus").textContent = "Falha na restauração."; }
+}
+
 /* ================= TODAS AS ÓTICAS ================= */
 async function carregarLojas() {
   try { lojas = await listStores(); } catch (_) { lojas = []; }
@@ -272,7 +344,7 @@ function wireEvents() {
     document.querySelectorAll(".tab[data-adm]").forEach((x) => x.classList.remove("active"));
     t.classList.add("active");
     const v = t.dataset.adm;
-    ["loja", "usuarios", "lojas"].forEach((k) => {
+    ["loja", "usuarios", "backup", "lojas"].forEach((k) => {
       const el = $("adm" + k.charAt(0).toUpperCase() + k.slice(1));
       if (el) el.style.display = k === v ? "block" : "none";
     });
@@ -306,6 +378,10 @@ function wireEvents() {
   $("u_stores").addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (c) c.classList.toggle("on"); });
   $("btnSalvarUser").addEventListener("click", salvarUsuario);
   $("btnResetSenha").addEventListener("click", resetarSenha);
+
+  $("btnBackupJson").addEventListener("click", backupJson);
+  $("btnBackupCsv").addEventListener("click", backupCsv);
+  $("btnRestaurar").addEventListener("click", restaurar);
 
   $("btnNovaLoja").addEventListener("click", () => openModal("lojaBack"));
   $("btnCriarLoja").addEventListener("click", criarLoja);
