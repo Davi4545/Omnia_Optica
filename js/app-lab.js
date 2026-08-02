@@ -11,6 +11,7 @@ let sellers = [];
 let labs = [];
 let osList = [];
 let osEditId = null;
+let soAtrasadas = false;
 
 init();
 async function init() {
@@ -58,13 +59,56 @@ function renderLab() {
   const kLab = osList.filter((o) => o.status === "enviada" || o.status === "producao").length;
   const kAtraso = osList.filter(osAtrasada).length;
   const kEntreg = osList.filter((o) => o.status === "entregue" && (o.datas.entrega || "").slice(0, 7) === mes).length;
+
+  // Resumo em linha: compacto, e o que está zerado fica discreto em vez de
+  // ocupar o mesmo peso visual de um número que exige ação.
   $("labKpis").innerHTML = [
-    { t: "Em aberto", v: kAberto }, { t: "No laboratório", v: kLab },
-    { t: "Atrasadas", v: kAtraso, late: true }, { t: "Entregues no mês", v: kEntreg, accent: true }
-  ].map((k) => `<div class="kpi${k.accent ? " accent" : ""}"><div class="t">${esc(k.t)}</div><div class="v" style="${k.late && k.v > 0 ? "color:var(--stop)" : ""}">${num(k.v)}</div></div>`).join("");
+    { t: "em aberto", v: kAberto },
+    { t: "no laboratório", v: kLab },
+    { t: "atrasadas", v: kAtraso, classe: kAtraso > 0 ? "alerta" : "" },
+    { t: "entregues no mês", v: kEntreg, classe: kEntreg > 0 ? "bom" : "" }
+  ].map((k) => `<div class="rItem ${k.classe || ""} ${k.v === 0 && !k.classe ? "zero" : ""}">
+      <span class="rV">${num(k.v)}</span><span class="rT">${esc(k.t)}</span></div>`).join("");
+
+  const total = osList.length;
+  $("labSub").textContent = total
+    ? `${total} ordem${total > 1 ? "ns" : ""} de serviço · toque num cartão para editar`
+    : "Acompanhe cada óculos até a entrega";
+
+  const btnF = $("btnFiltroAtraso");
+  btnF.style.display = kAtraso > 0 ? "inline-flex" : "none";
+  btnF.classList.toggle("stop", soAtrasadas);
+  btnF.textContent = soAtrasadas ? "✕ Ver todas" : `⚠ ${kAtraso} atrasada${kAtraso > 1 ? "s" : ""}`;
+
+  // Nenhuma OS: em vez de 6 colunas ocas, explica o fluxo e chama para a ação.
+  if (!total) {
+    $("kanban").style.display = "none";
+    const vazio = $("labVazio");
+    vazio.style.display = "block";
+    vazio.innerHTML = `<div class="labZero">
+      <div class="ic">🔬</div>
+      <h3>Nenhuma ordem de serviço ainda</h3>
+      <p>A OS acompanha o óculos do pedido à entrega: receita, armação, lente,
+         laboratório e o saldo a receber — tudo num cartão só.</p>
+      <div class="fluxo">
+        ${OS_STATUS.map((st, i) => `${i ? '<i>›</i>' : ''}<span>${esc(st.n)}</span>`).join("")}
+      </div>
+      <button class="btn primary" id="btnPrimeiraOS"><span>Criar a primeira OS</span></button>
+      <div class="hint" style="margin-top:14px">Dica: ao finalizar uma venda, marque
+        “Gerar OS de laboratório” e ela já vem preenchida.</div>
+    </div>`;
+    const b = document.getElementById("btnPrimeiraOS");
+    if (b) b.addEventListener("click", () => abrirOS(null));
+    return;
+  }
+  $("labVazio").style.display = "none";
+  $("kanban").style.display = "flex";
+
+  const base = soAtrasadas ? osList.filter(osAtrasada) : osList;
 
   $("kanban").innerHTML = OS_STATUS.map((st) => {
-    const items = osList.filter((o) => o.status === st.k).sort((a, b) => (a.datas.previsao || "").localeCompare(b.datas.previsao || ""));
+    const items = base.filter((o) => o.status === st.k)
+      .sort((a, b) => (a.datas.previsao || "9999").localeCompare(b.datas.previsao || "9999"));
     const cards = items.map((o) => {
       const late = osAtrasada(o), adv = proximoStatus(o.status);
       return `<div class="osCard" data-os="${esc(o.id)}">
@@ -75,8 +119,11 @@ function renderLab() {
         <div class="osFoot"><span class="prev${late ? " late" : ""}">${late ? "⚠ " : "📅 "}${esc(fmtData(o.datas.previsao))}${o.valores.saldo > 0 ? " · saldo " + money(o.valores.saldo) : ""}</span>
         ${adv ? `<button class="adv" data-adv="${esc(o.id)}" title="Avançar para ${esc(statusInfo(adv).n)}">→</button>` : `<span class="tag go">✓</span>`}</div></div>`;
     }).join("");
-    return `<div class="kanCol"><div class="colHead"><span class="dot" style="background:${st.cor}"></span><span class="cn">${esc(st.n)}</span><span class="cc">${items.length}</span></div>
-      ${cards || '<div class="hint" style="padding:6px 2px">—</div>'}</div>`;
+    return `<div class="kanCol" data-n="${items.length}">
+      <div class="colHead" style="color:${st.cor}">
+        <span class="dot" style="background:${st.cor}"></span>
+        <span class="cn">${esc(st.n)}</span><span class="cc">${items.length}</span></div>
+      ${cards || `<div class="colVazia">${soAtrasadas ? "nada atrasado aqui" : "sem OS nesta etapa"}</div>`}</div>`;
   }).join("");
 }
 
@@ -175,6 +222,7 @@ function checkPrefill() {
 
 function wireEvents() {
   $("btnNovaOS").addEventListener("click", () => abrirOS(null));
+  $("btnFiltroAtraso").addEventListener("click", () => { soAtrasadas = !soAtrasadas; renderLab(); });
   $("kanban").addEventListener("click", (e) => {
     const adv = e.target.closest("[data-adv]"); if (adv) { e.stopPropagation(); avancarOS(adv.dataset.adv); return; }
     const card = e.target.closest("[data-os]"); if (card) abrirOS(card.dataset.os);
