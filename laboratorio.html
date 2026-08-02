@@ -59,6 +59,21 @@
             <td><input id="rx_oe_add" inputmode="decimal" placeholder="0,00"/></td><td><input id="rx_oe_alt" inputmode="decimal" placeholder="mm"/></td></tr>
         </tbody></table>
       <div class="rxNote">Esférico/cilíndrico em dioptrias (use − para negativo). Adição e altura só para multifocal/bifocal.</div>
+      <div class="anexo" style="margin-top:10px">
+        <label class="anexoBtn" id="os_rxBtn" for="os_rxFile">
+          <span class="ic">📎</span>
+          <span><b>Anexar foto da receita</b><small>Guarda a receita original junto da OS</small></span>
+        </label>
+        <input type="file" id="os_rxFile" accept="image/*" capture="environment" hidden/>
+        <div class="anexoPrev" id="os_rxPrev" style="display:none">
+          <img id="os_rxImg" alt="Receita anexada"/>
+          <div class="anexoInfo"><b>Receita anexada</b><small id="os_rxInfo"></small></div>
+          <div class="anexoActs">
+            <button type="button" class="btn ghost sm" id="os_rxVer">Ver</button>
+            <button type="button" class="btn ghost sm icon" id="os_rxDel" title="Remover">✕</button>
+          </div>
+        </div>
+      </div>
       <div class="frow3" style="margin-top:8px">
         <div class="field"><label>Médico / optometrista</label><input id="os_medico" placeholder="Dr(a)."/></div>
         <div class="field" style="max-width:120px"><label>CRM/CRO</label><input id="os_cro" placeholder="—"/></div>
