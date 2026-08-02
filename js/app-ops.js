@@ -5,7 +5,8 @@ import {
 } from "./db.js";
 import {
   $, esc, uid, money, num, dateKey, monthKey, hhmm, clamp, brNum,
-  comprimirImagem, toast, openModal, closeModal, wireModals, downloadBlob
+  comprimirImagem, comprimirDocumento, abrirImagem, tamanhoLegivel,
+  toast, openModal, closeModal, wireModals, downloadBlob
 } from "./utils.js";
 import { PRODUTOS, TIPOS_LENTE, TRATAMENTOS, MOTIVOS_NAO, GENEROS, SELOS, agg, options } from "./domain.js";
 
@@ -153,13 +154,53 @@ function formVendeu(cid) {
   return `<div class="frow">
     <div class="field"><label>Valor (R$)</label><input class="mono" id="v_valor_${cid}" inputmode="decimal" placeholder="1.890,00"/></div>
     <div class="field"><label>Itens</label><input class="mono" id="v_itens_${cid}" inputmode="numeric" placeholder="2"/></div></div>
-    <div class="frow" style="margin-top:10px">
+
+    <div class="secLinha">Cliente</div>
+    <div class="frow">
+      <div class="field"><label>Nome</label><input id="v_cli_${cid}" placeholder="Nome do cliente"/></div>
+      <div class="field"><label>Telefone / WhatsApp</label><input id="v_tel_${cid}" inputmode="tel" placeholder="(00) 00000-0000"/></div></div>
+
+    <div class="secLinha">Produto</div>
+    <div class="frow">
       <div class="field"><label>Produto</label><select id="v_prod_${cid}">${options(PRODUTOS)}</select></div>
       <div class="field"><label>Tipo de lente</label><select id="v_lente_${cid}">${options(TIPOS_LENTE)}</select></div></div>
-    <div class="frow" style="margin-top:10px">
-      <div class="field"><label>Tratamento</label><select id="v_trat_${cid}">${options(TRATAMENTOS)}</select></div>
-      <div class="field"><label>Cliente (p/ CRM)</label><input id="v_cli_${cid}" placeholder="Nome — opcional"/></div></div>
-    <div class="field full" style="margin-top:10px"><label>Observação</label><input id="v_obs_${cid}" placeholder="Opcional"/></div>
+    <div class="field full" style="margin-top:10px"><label>Tratamento</label><select id="v_trat_${cid}">${options(TRATAMENTOS)}</select></div>
+
+    <div class="secLinha">Receita <span class="op">opcional</span></div>
+    <div class="rxMini">
+      <table class="rxTable"><thead><tr><th></th><th>Esférico</th><th>Cilíndrico</th><th>Eixo</th><th>Adição</th></tr></thead>
+        <tbody>
+          <tr><td>OD</td>
+            <td><input id="v_od_esf_${cid}" inputmode="decimal" placeholder="0,00"/></td>
+            <td><input id="v_od_cil_${cid}" inputmode="decimal" placeholder="0,00"/></td>
+            <td><input id="v_od_eixo_${cid}" inputmode="numeric" placeholder="0°"/></td>
+            <td><input id="v_od_add_${cid}" inputmode="decimal" placeholder="0,00"/></td></tr>
+          <tr><td>OE</td>
+            <td><input id="v_oe_esf_${cid}" inputmode="decimal" placeholder="0,00"/></td>
+            <td><input id="v_oe_cil_${cid}" inputmode="decimal" placeholder="0,00"/></td>
+            <td><input id="v_oe_eixo_${cid}" inputmode="numeric" placeholder="0°"/></td>
+            <td><input id="v_oe_add_${cid}" inputmode="decimal" placeholder="0,00"/></td></tr>
+        </tbody></table>
+      <div class="rxNote">Use − para negativo. DNP e altura são pedidos na OS de laboratório.</div>
+
+      <div class="anexo" id="v_anexoBox_${cid}">
+        <label class="anexoBtn" for="v_rxFile_${cid}">
+          <span class="ic">📎</span>
+          <span><b>Anexar foto da receita</b><small>Tire a foto reta, com a receita bem iluminada</small></span>
+        </label>
+        <input type="file" id="v_rxFile_${cid}" accept="image/*" capture="environment" hidden/>
+        <div class="anexoPrev" id="v_rxPrev_${cid}" style="display:none">
+          <img id="v_rxImg_${cid}" alt="Receita anexada"/>
+          <div class="anexoInfo"><b>Receita anexada</b><small id="v_rxInfo_${cid}"></small></div>
+          <div class="anexoActs">
+            <button type="button" class="btn ghost sm" data-verrx="${cid}">Ver</button>
+            <button type="button" class="btn ghost sm icon" data-delrx="${cid}" title="Remover">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field full" style="margin-top:12px"><label>Observação</label><input id="v_obs_${cid}" placeholder="Opcional"/></div>
     <label class="chk"><input type="checkbox" id="v_os_${cid}"/> Gerar OS de laboratório ao finalizar</label>
     ${finButtons(cid)}`;
 }
@@ -202,6 +243,21 @@ function finAction(act, cid) {
   if (act === "close") { const b = $("fin_" + cid); if (b) { b.style.display = "none"; b.innerHTML = ""; } return; }
   if (act === "save") finalizar(cid);
 }
+// receitas anexadas, por atendimento (só em memória até finalizar)
+const rxAnexo = {};
+
+function lerRxCurta(cid) {
+  const g = (k) => { const el = $(`v_${k}_${cid}`); const v = el ? el.value.trim() : ""; return v === "" ? "" : brNum(v); };
+  const ax = (k) => { const el = $(`v_${k}_${cid}`); const v = el ? el.value.trim() : ""; return v === "" ? "" : (parseInt(v, 10) || 0); };
+  const rx = {
+    od: { esf: g("od_esf"), cil: g("od_cil"), eixo: ax("od_eixo"), add: g("od_add"), dnp: "", alt: "" },
+    oe: { esf: g("oe_esf"), cil: g("oe_cil"), eixo: ax("oe_eixo"), add: g("oe_add"), dnp: "", alt: "" },
+    medico: "", cro: "", dataRx: ""
+  };
+  const vazia = ["od", "oe"].every((e) => ["esf", "cil", "eixo", "add"].every((k) => rx[e][k] === ""));
+  return vazia ? null : rx;
+}
+
 async function finalizar(cid) {
   const f = state.foco.find((x) => x.id === cid); if (!f) return;
   const box = $("fin_" + cid), tipo = box.dataset.tipo;
@@ -213,6 +269,9 @@ async function finalizar(cid) {
       itens: parseInt($("v_itens_" + cid).value || "0", 10) || 0,
       produto: $("v_prod_" + cid).value, lente: $("v_lente_" + cid).value,
       tratamento: $("v_trat_" + cid).value, clienteNome: $("v_cli_" + cid).value.trim(),
+      clienteTel: ($("v_tel_" + cid) ? $("v_tel_" + cid).value.trim() : ""),
+      receita: lerRxCurta(cid),
+      receitaFoto: rxAnexo[cid] || "",
       obs: $("v_obs_" + cid).value.trim(), motivo: "", genero: ""
     });
   } else if (tipo === "naovendeu") {
@@ -227,12 +286,17 @@ async function finalizar(cid) {
   const gerarOS = tipo === "vendeu" && $("v_os_" + cid) && $("v_os_" + cid).checked;
   try { await addRecord(STORE, rec); } catch (e) { toast("Falha ao registrar."); return; }
   if (tipo === "vendeu" && rec.clienteNome) crmUpsertVenda(rec);
+  delete rxAnexo[cid];
   state.foco = state.foco.filter((x) => x.id !== cid);
   if (!state.fila.includes(f.sellerId)) state.fila.push(f.sellerId);
   render(); persist();
   toast(rec.resultado === "vendeu" ? ("Venda de " + money(rec.valor) + " registrada ✓") : "Atendimento registrado.");
   if (gerarOS) {
-    sessionStorage.setItem("omnia_os_prefill", JSON.stringify({ cli: rec.clienteNome || "", sellerId: rec.sellerId, vLente: rec.valor || 0, tipoLente: rec.lente || "" }));
+    sessionStorage.setItem("omnia_os_prefill", JSON.stringify({
+      cli: rec.clienteNome || "", tel: rec.clienteTel || "", sellerId: rec.sellerId,
+      vLente: rec.valor || 0, tipoLente: rec.lente || "",
+      receita: rec.receita || null, receitaFoto: rec.receitaFoto || ""
+    }));
     location.href = "laboratorio.html";
   }
 }
@@ -242,10 +306,11 @@ async function crmUpsertVenda(rec) {
   const grau = /(grau|lente|multifocal|visão|bifocal|contato)/i.test((rec.produto || "") + " " + (rec.lente || ""));
   const k = rec.clienteNome.trim().toLowerCase();
   let c = clientes.find((x) => (x.nome || "").trim().toLowerCase() === k);
-  if (!c) c = { id: "cli_" + uid(), nome: rec.clienteNome.trim(), telefone: "", nascimento: "", etapa: "fechado", obs: "", compras: [], proximoRetorno: "", ownerId: rec.sellerId, ownerNome: s ? s.nome : "", ultimaCompraTs: 0, criadoEm: Date.now() };
+  if (!c) c = { id: "cli_" + uid(), nome: rec.clienteNome.trim(), telefone: rec.clienteTel || "", nascimento: "", etapa: "fechado", obs: "", compras: [], proximoRetorno: "", ownerId: rec.sellerId, ownerNome: s ? s.nome : "", ultimaCompraTs: 0, criadoEm: Date.now() };
   c.compras = c.compras || [];
   c.compras.push({ valor: rec.valor || 0, desc: (rec.produto || "Venda") + (rec.lente && rec.lente !== "Não se aplica" ? " · " + rec.lente : ""), ts: Date.now() });
   c.ultimaCompraTs = Date.now(); c.etapa = "fechado";
+  if (rec.clienteTel && !c.telefone) c.telefone = rec.clienteTel; // não sobrescreve o que já existe
   if (!c.ownerId) { c.ownerId = rec.sellerId; c.ownerNome = s ? s.nome : ""; }
   if (grau) c.proximoRetorno = dplus(365);
   c.atualizadoEm = Date.now();
@@ -384,7 +449,39 @@ function wireEvents() {
   $("btnCallNext").addEventListener("click", chamarProximo);
   $("filaList").addEventListener("click", (e) => { const b = e.target.closest("button[data-fila]"); if (b) filaAction(b.dataset.fila, b.dataset.id); });
   $("foraList").addEventListener("click", (e) => { const p = e.target.closest("[data-enter]"); if (p) entrarNaFila(p.dataset.enter); });
-  $("focoPanel").addEventListener("click", (e) => { const b = e.target.closest("button[data-fin]"); if (b) finAction(b.dataset.fin, b.dataset.cid); });
+  $("focoPanel").addEventListener("click", (e) => {
+    const ver = e.target.closest("[data-verrx]");
+    if (ver) { if (rxAnexo[ver.dataset.verrx]) abrirImagem(rxAnexo[ver.dataset.verrx]); return; }
+    const del = e.target.closest("[data-delrx]");
+    if (del) { const c = del.dataset.delrx; delete rxAnexo[c];
+      $("v_rxPrev_" + c).style.display = "none";
+      $("v_anexoBox_" + c).querySelector(".anexoBtn").style.display = "flex";
+      $("v_rxFile_" + c).value = ""; return; }
+    const b = e.target.closest("button[data-fin]"); if (b) finAction(b.dataset.fin, b.dataset.cid);
+  });
+  // anexo da receita: comprime para caber no documento sem perder legibilidade
+  $("focoPanel").addEventListener("change", async (e) => {
+    const inp = e.target.closest("input[type=file][id^=v_rxFile_]");
+    if (!inp) return;
+    const cid = inp.id.replace("v_rxFile_", "");
+    const f = inp.files && inp.files[0]; if (!f) return;
+    try {
+      toast("Preparando a foto…");
+      const r = await comprimirDocumento(f);
+      rxAnexo[cid] = r.dataUrl;
+      $("v_rxImg_" + cid).src = r.dataUrl;
+      $("v_rxInfo_" + cid).textContent = `${r.largura}×${r.altura} · ${tamanhoLegivel(r.bytes)}`;
+      $("v_rxPrev_" + cid).style.display = "flex";
+      $("v_anexoBox_" + cid).querySelector(".anexoBtn").style.display = "none";
+      toast("Receita anexada ✓");
+    } catch (err) {
+      console.error(err);
+      toast(err.message === "imagem grande demais"
+        ? "A foto ficou grande demais. Tente enquadrar só a receita."
+        : "Não foi possível ler a imagem.");
+      inp.value = "";
+    }
+  });
   $("btnAddSeller").addEventListener("click", () => abrirSeller(null));
   $("btnSaveSeller").addEventListener("click", salvarSeller);
   $("btnDeleteSeller").addEventListener("click", removerSeller);
