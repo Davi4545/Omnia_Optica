@@ -60,28 +60,40 @@ export function normalizeCode(code) {
     .replace(/[^a-z0-9_-]/g, "");
 }
 
-// Busca a loja por código com UM get pontual em /storeCodes/{code}.
-// Nunca lista a coleção de lojas (evita vazamento e respeita as regras).
+// Busca a loja pelo código de acesso.
+// 1º) tenta o índice /storeCodes (um get pontual, não vaza a lista de lojas)
+// 2º) se ele não existir ou estiver bloqueado, procura na coleção /stores
+// Assim o cadastro funciona tanto com as regras novas quanto com as antigas.
 export async function findStoreByCode(code) {
   const c = normalizeCode(code);
   if (!c) return null;
-  const map = await getDoc(doc(db, "storeCodes", c));
-  if (!map.exists()) return null;
-  const storeId = map.data().storeId;
-  if (!storeId) return null;
-  return { id: storeId, ...(map.data().store || {}) };
+  try {
+    const map = await getDoc(doc(db, "storeCodes", c));
+    if (map.exists() && map.data().storeId) {
+      return { id: map.data().storeId, ...(map.data().store || {}) };
+    }
+  } catch (_) { /* índice ausente ou bloqueado: usa o caminho abaixo */ }
+  try {
+    const stores = await listStores();
+    return stores.find((s) => normalizeCode(s.code) === c) || null;
+  } catch (_) { return null; }
 }
 
 // Registra/atualiza o código de acesso de uma loja (gestor).
+// O índice /storeCodes é um extra. Se as regras não o permitirem, seguimos
+// em frente: o código também fica no campo "code" do documento da loja.
 export async function setStoreCode(code, storeId, storeName) {
   const c = normalizeCode(code);
   if (!c) throw new Error("Código inválido");
-  await setDoc(doc(db, "storeCodes", c), { storeId, store: { name: storeName || "" } }, { merge: true });
+  try {
+    await setDoc(doc(db, "storeCodes", c), { storeId, store: { name: storeName || "" } }, { merge: true });
+  } catch (_) { /* opcional */ }
   return c;
 }
 export async function deleteStoreCode(code) {
   const c = normalizeCode(code);
-  if (c) await deleteDoc(doc(db, "storeCodes", c));
+  if (!c) return;
+  try { await deleteDoc(doc(db, "storeCodes", c)); } catch (_) { /* opcional */ }
 }
 
 // ---------- tratamento de falha nas assinaturas ----------
@@ -131,10 +143,25 @@ export const subscribeClientes = (s, cb) => subscribeCol(s, "clientes", cb);
 export const saveCliente   = (s, c)  => saveDoc(s, "clientes", c.id, c);
 export const deleteCliente = (s, id) => removeDoc(s, "clientes", id);
 
-// ---------- OS DE LABORATÓRIO (novo) ----------
-export const subscribeOS = (s, cb) => subscribeCol(s, "os", cb);
-export const saveOS   = (s, o)  => saveDoc(s, "os", o.id, o);
-export const deleteOS = (s, id) => removeDoc(s, "os", id);
+// ---------- OS DE LABORATÓRIO ----------
+// As ordens de serviço ficam na coleção "app", com id prefixado por "os_".
+// Motivo: "app" já é liberada por qualquer versão das regras (antiga ou nova),
+// então o Laboratório funciona sem depender de republicar regra nenhuma.
+// O documento app/state (estado operacional) é ignorado pelo filtro abaixo.
+const COL_OS = "app";
+const PREFIXO_OS = "os_";
+const ehDocOS = (d) => d && typeof d.id === "string" && d.id.startsWith(PREFIXO_OS);
+
+export function subscribeOS(storeId, cb) {
+  return onSnapshot(col(storeId, COL_OS),
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter(ehDocOS)),
+    (e) => erroDados("os", e, storeId));
+}
+export const saveOS = (s, o) => {
+  const id = String(o.id || "").startsWith(PREFIXO_OS) ? o.id : PREFIXO_OS + (o.id || Math.random().toString(16).slice(2));
+  return saveDoc(s, COL_OS, id, { ...o, id });
+};
+export const deleteOS = (s, id) => removeDoc(s, COL_OS, id);
 
 // ---------- PONTO ----------
 export const subscribePonto = (s, cb) => subscribeCol(s, "ponto", cb);
@@ -156,6 +183,42 @@ export async function getFaixas(storeId) {
 }
 export async function saveFaixas(storeId, faixas) {
   await setDoc(doc(db, "stores", storeId, "comissaoConfig", "faixas"), { faixas }, { merge: true });
+}
+
+// ---------- CATÁLOGO PÚBLICO (cliente, sem login) ----------
+// Exige "allow read: if true" em /produtos e /vendedores nas regras.
+export async function getProdutosPublico(storeId) {
+  const qs = await getDocs(col(storeId, "produtos"));
+  return qs.docs.map((d) => ({ id: d.id, ...d.data() })).filter((p) => p.ativo !== false);
+}
+export async function getLojaPublica(storeId) {
+  const s = await getDoc(doc(db, "stores", storeId));
+  return s.exists() ? { id: storeId, name: s.data().name || "", logo: s.data().logo || "" } : null;
+}
+
+// ---------- BACKUP ----------
+// Lê tudo de uma loja para exportação. Usado no painel de gestão.
+export async function exportarLoja(storeId) {
+  const nomes = ["records", "clientes", "ponto", "produtos", "vendedores"];
+  const dump = { loja: null, estado: null, comissao: null, geradoEm: new Date().toISOString(), storeId };
+  try { dump.loja = await getStore(storeId); } catch (_) {}
+  try {
+    const st = await getDoc(stateRef(storeId));
+    dump.estado = st.exists() ? st.data() : null;
+  } catch (_) {}
+  try { dump.comissao = await getFaixas(storeId); } catch (_) {}
+  for (const n of nomes) {
+    try {
+      const qs = await getDocs(col(storeId, n));
+      dump[n] = qs.docs.map((d) => ({ id: d.id, ...d.data() }));
+    } catch (e) { dump[n] = { erro: (e && e.code) || "falha na leitura" }; }
+  }
+  // OS vivem em app/ com prefixo os_
+  try {
+    const qs = await getDocs(col(storeId, COL_OS));
+    dump.os = qs.docs.map((d) => ({ id: d.id, ...d.data() })).filter(ehDocOS);
+  } catch (e) { dump.os = { erro: (e && e.code) || "falha na leitura" }; }
+  return dump;
 }
 
 // ---------- CONTATO PÚBLICO DO VENDEDOR ----------
