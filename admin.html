@@ -18,6 +18,7 @@
     <div class="tabs" id="admTabs" style="margin-bottom:18px">
       <button class="tab active" data-adm="loja">Minha ótica</button>
       <button class="tab" data-adm="usuarios">Usuários</button>
+      <button class="tab" data-adm="backup">Backup</button>
       <button class="tab" data-adm="lojas" id="tabLojas" style="display:none">Todas as óticas</button>
     </div>
 
@@ -69,6 +70,39 @@
             <button class="btn ghost sm" id="btnRecarregarUsers">Recarregar</button>
           </div>
           <div id="usersBox"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BACKUP -->
+    <section id="admBackup" style="display:none">
+      <div class="card">
+        <div class="cardHead"><div><span class="eyebrow">Segurança dos dados</span><h2>Backup da ótica</h2></div></div>
+        <div class="cardBody">
+          <div class="hint" style="margin-bottom:14px">
+            Baixe uma cópia completa dos seus dados. Guarde fora do computador da loja —
+            um backup que mora só na máquina não protege contra perda dela.
+          </div>
+          <div class="inviteBox" style="margin-bottom:12px">
+            <div><div class="inviteTit">Backup completo (JSON)</div>
+              <div class="inviteSub">Tudo num arquivo só: vendas, clientes, OS, ponto, produtos, consultores e configurações. É o formato que permite restaurar.</div></div>
+            <button class="btn primary sm" id="btnBackupJson"><span>Baixar JSON</span></button>
+          </div>
+          <div class="inviteBox" style="margin-bottom:12px">
+            <div><div class="inviteTit">Planilhas (CSV)</div>
+              <div class="inviteSub">Um arquivo por área, para abrir no Excel ou Google Planilhas.</div></div>
+            <button class="btn go sm" id="btnBackupCsv">Baixar CSVs</button>
+          </div>
+          <div id="backupStatus" class="hint"></div>
+          <div class="divider"></div>
+          <div class="sectionLabel">Restaurar</div>
+          <div class="hint" style="margin-bottom:10px">
+            Selecione um arquivo JSON gerado aqui. A restauração <b>não apaga</b> o que já existe:
+            ela regrava os documentos do arquivo por cima dos de mesmo id.
+          </div>
+          <input type="file" id="restoreFile" accept="application/json,.json"/>
+          <button class="btn ghost sm" id="btnRestaurar" style="margin-top:10px">Restaurar deste arquivo</button>
+          <div id="restoreStatus" class="hint" style="margin-top:10px"></div>
         </div>
       </div>
     </section>
