@@ -21,6 +21,7 @@
         <button class="btn ghost sm" id="btnCarrinho" style="position:relative">
           🛒 Carrinho <span id="cartBadge" class="cartBadge" style="display:none">0</span>
         </button>
+        <button class="btn ghost sm" id="btnMeuLink">🔗 Meu link</button>
         <button class="btn primary" id="btnNovoProd"><span>+ Produto</span></button>
       </div>
     </div>
@@ -54,6 +55,27 @@
         <button class="btn stop sm" id="btnDeleteProd" style="margin-right:auto;display:none">Excluir</button>
         <button class="btn ghost sm" data-close="prodBack">Cancelar</button>
         <button class="btn primary sm" id="btnSaveProd"><span>Salvar</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: link público do consultor -->
+<div class="modalBack" id="linkBack">
+  <div class="modal">
+    <div class="modalHead"><h3>Meu link do catálogo</h3><button class="btn ghost icon" data-close="linkBack">✕</button></div>
+    <div class="modalBody">
+      <div class="hint">Envie este link ao cliente. Ele vê o catálogo sem precisar de login e monta a lista;
+        ao enviar, a mensagem chega no <b>seu</b> WhatsApp.</div>
+      <div class="field" style="margin-top:12px"><label>Seu nome (aparece para o cliente)</label>
+        <input id="lk_nome" placeholder="Ex: Camila"/></div>
+      <div class="field"><label>Seu WhatsApp</label><input id="lk_wa" inputmode="tel" placeholder="(00) 00000-0000"/></div>
+      <button class="btn go sm" id="btnSalvarContato">Salvar meu contato</button>
+      <div class="sectionLabel" style="margin-top:16px">Link</div>
+      <code class="inviteLink" id="lk_url">—</code>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button class="btn ghost sm" id="btnAbrirLink">Abrir</button>
+        <button class="btn primary sm" id="btnCopiarLink"><span>Copiar link</span></button>
       </div>
     </div>
   </div>
