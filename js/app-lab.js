@@ -1,6 +1,6 @@
 import { initShell } from "./session.js";
 import { subscribeState, subscribeOS, saveOS, deleteOS } from "./db.js";
-import { $, esc, uid, money, num, dateKey, monthKey, fmtData, brNum, toast, openModal, closeModal, wireModals } from "./utils.js";
+import { $, esc, uid, money, num, dateKey, monthKey, fmtData, brNum, toast, openModal, closeModal, wireModals, comprimirDocumento, abrirImagem, tamanhoLegivel } from "./utils.js";
 import {
   MATERIAIS, TIPOS_LENTE_OS, TRAT_LENTE, OS_STATUS,
   statusInfo, proximoStatus, osNumero, rxResumo, options
@@ -145,6 +145,15 @@ function readRx() {
   const eye = (p) => ({ esf: g("rx_" + p + "_esf"), cil: g("rx_" + p + "_cil"), eixo: ax("rx_" + p + "_eixo"), dnp: g("rx_" + p + "_dnp"), add: g("rx_" + p + "_add"), alt: g("rx_" + p + "_alt") });
   return { od: eye("od"), oe: eye("oe"), medico: $("os_medico").value.trim(), cro: $("os_cro").value.trim(), dataRx: $("os_dataRx").value };
 }
+let fotoRx = "";
+function setFoto(dataUrl) {
+  fotoRx = dataUrl || "";
+  const box = $("os_rxPrev"), btn = $("os_rxBtn");
+  if (!box) return;
+  if (fotoRx) { $("os_rxImg").src = fotoRx; box.style.display = "flex"; if (btn) btn.style.display = "none"; }
+  else { box.style.display = "none"; if (btn) btn.style.display = "flex"; }
+}
+
 function renderTratChips(sel) { const s = sel || []; $("os_trat").innerHTML = TRAT_LENTE.map((t) => `<div class="chip${s.includes(t) ? " on" : ""}" data-trat="${esc(t)}">${esc(t)}</div>`).join(""); }
 function readTrat() { return [...$("os_trat").querySelectorAll(".chip.on")].map((c) => c.dataset.trat); }
 function updateTotals() { const a = brNum($("os_v_arm").value), l = brNum($("os_v_lente").value), s = brNum($("os_v_sinal").value); $("os_v_total").value = money(a + l); $("os_v_saldo").value = money(Math.max(0, (a + l) - s)); }
@@ -175,9 +184,17 @@ function abrirOS(id, pre) {
     $("osTitle").textContent = "Nova OS de laboratório";
     ["os_id", "os_cli", "os_tel", "os_arm_modelo", "os_arm_cor", "os_arm_aro", "os_arm_ponte", "os_arm_haste", "os_lente_marca", "os_lab", "os_v_arm", "os_v_lente", "os_v_sinal", "os_obs"].forEach((x) => set(x, ""));
     fillRx(null); $("os_arm_origem").value = "loja"; $("os_lente_tipo").value = TIPOS_LENTE_OS[0]; $("os_lente_mat").value = "1.67";
-    renderTratChips(["Antirreflexo"]); $("os_statusWrap").style.display = "none"; $("btnDeleteOS").style.display = "none";
+    renderTratChips(["Antirreflexo"]); setFoto(""); $("os_statusWrap").style.display = "none"; $("btnDeleteOS").style.display = "none";
     const d = new Date(); d.setDate(d.getDate() + 5); set("os_prev", dateKey(d));
-    if (pre) { set("os_cli", pre.cli || ""); if (pre.sellerId) $("os_seller").value = pre.sellerId; if (pre.vLente) set("os_v_lente", String(pre.vLente).replace(".", ",")); if (pre.tipoLente && TIPOS_LENTE_OS.includes(pre.tipoLente)) $("os_lente_tipo").value = pre.tipoLente; }
+    if (pre) {
+      set("os_cli", pre.cli || "");
+      set("os_tel", pre.tel || "");
+      if (pre.sellerId) $("os_seller").value = pre.sellerId;
+      if (pre.vLente) set("os_v_lente", String(pre.vLente).replace(".", ","));
+      if (pre.tipoLente && TIPOS_LENTE_OS.includes(pre.tipoLente)) $("os_lente_tipo").value = pre.tipoLente;
+      if (pre.receita) fillRx(pre.receita);          // graus digitados na venda
+      if (pre.receitaFoto) setFoto(pre.receitaFoto); // foto anexada na venda
+    }
   }
   updateTotals(); openModal("osBack");
 }
@@ -190,6 +207,7 @@ async function salvarOS() {
     armacao: { origem: $("os_arm_origem").value, modelo: $("os_arm_modelo").value.trim(), cor: $("os_arm_cor").value.trim(), aro: $("os_arm_aro").value.trim(), ponte: $("os_arm_ponte").value.trim(), haste: $("os_arm_haste").value.trim() },
     lente: { tipo: $("os_lente_tipo").value, material: $("os_lente_mat").value, tratamentos: readTrat(), marca: $("os_lente_marca").value.trim() },
     laboratorio: $("os_lab").value.trim(), obs: $("os_obs").value.trim(),
+    receitaFoto: fotoRx,
     valores: { armacao: a, lente: l, total: a + l, sinal: s, saldo: Math.max(0, (a + l) - s) },
     atualizadoEm: Date.now()
   };
@@ -231,4 +249,22 @@ function wireEvents() {
   $("btnDeleteOS").addEventListener("click", removerOS);
   $("os_trat").addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (c) c.classList.toggle("on"); });
   ["os_v_arm", "os_v_lente", "os_v_sinal"].forEach((id) => $(id).addEventListener("input", updateTotals));
+
+  $("os_rxFile").addEventListener("change", async (e) => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    try {
+      toast("Preparando a foto…");
+      const r = await comprimirDocumento(f);
+      setFoto(r.dataUrl);
+      $("os_rxInfo").textContent = `${r.largura}×${r.altura} · ${tamanhoLegivel(r.bytes)}`;
+      toast("Receita anexada ✓");
+    } catch (err) {
+      toast(err.message === "imagem grande demais"
+        ? "A foto ficou grande demais. Enquadre só a receita."
+        : "Não foi possível ler a imagem.");
+      e.target.value = "";
+    }
+  });
+  $("os_rxVer").addEventListener("click", () => { if (fotoRx) abrirImagem(fotoRx); });
+  $("os_rxDel").addEventListener("click", () => { setFoto(""); $("os_rxFile").value = ""; });
 }
