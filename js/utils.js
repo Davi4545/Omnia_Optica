@@ -64,6 +64,57 @@ export function comprimirImagem(file, max = 384, q = 0.8) {
   });
 }
 
+// Compressão para FOTO DE DOCUMENTO (receita).
+// Diferente da foto de perfil: precisa manter os números legíveis, então usa
+// resolução maior. Reduz a qualidade em passos até caber no limite pedido —
+// o documento do Firestore aceita no máximo 1 MB, e base64 cresce ~33%.
+export function comprimirDocumento(file, maxLado = 1400, limiteBytes = 700 * 1024) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > h && w > maxLado) { h = Math.round(h * maxLado / w); w = maxLado; }
+        else if (h > maxLado) { w = Math.round(w * maxLado / h); h = maxLado; }
+        const c = document.createElement("canvas");
+        const desenha = (lw, lh) => {
+          c.width = lw; c.height = lh;
+          const ctx = c.getContext("2d");
+          ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, lw, lh); // fundo branco p/ PNG transparente
+          ctx.drawImage(img, 0, 0, lw, lh);
+        };
+        desenha(w, h);
+        let q = 0.82, out = c.toDataURL("image/jpeg", q);
+        // baixa a qualidade e, se preciso, a resolução, até caber
+        while (out.length > limiteBytes && q > 0.4) { q -= 0.08; out = c.toDataURL("image/jpeg", q); }
+        while (out.length > limiteBytes && w > 700) {
+          w = Math.round(w * 0.85); h = Math.round(h * 0.85);
+          desenha(w, h); q = 0.7; out = c.toDataURL("image/jpeg", q);
+        }
+        if (out.length > limiteBytes) { rej(new Error("imagem grande demais")); return; }
+        res({ dataUrl: out, largura: w, altura: h, bytes: out.length });
+      };
+      img.onerror = () => rej(new Error("arquivo não é uma imagem"));
+      img.src = e.target.result;
+    };
+    r.onerror = () => rej(new Error("falha ao ler o arquivo"));
+    r.readAsDataURL(file);
+  });
+}
+
+// Abre uma imagem em nova aba (visualizar receita anexada)
+export function abrirImagem(dataUrl) {
+  const w = window.open("");
+  if (!w) { toast("Permita as janelas pop-up para ver a imagem."); return; }
+  w.document.write(`<title>Receita</title><body style="margin:0;background:#111;display:grid;place-items:center;min-height:100vh">
+    <img src="${dataUrl}" style="max-width:100%;max-height:100vh;object-fit:contain">`);
+  w.document.close();
+}
+
+// Formata bytes de forma legível
+export const tamanhoLegivel = (b) => b > 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.round(b / 1024) + " KB";
+
 // Toast (cria o elemento se não existir)
 let toastEl = null;
 export function toast(msg) {
