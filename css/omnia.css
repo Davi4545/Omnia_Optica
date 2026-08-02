@@ -392,3 +392,70 @@ tr.clickRow:hover td{background:var(--surface-2)}
 .userHead .avatar{width:46px;height:46px;font-size:19px;flex:none}
 .resetBox{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;
   padding:12px 14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line)}
+
+/* ---------- Catálogo público ---------- */
+.pubHead{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;backdrop-filter:blur(8px)}
+.pubHead .brand h1{font-size:19px}
+
+
+/* ============================================================
+   Laboratório — redesenho
+   Problemas corrigidos: números gigantes sem hierarquia,
+   colunas vazias como caixas ocas, botão principal espremido.
+   ============================================================ */
+
+/* --- cabeçalho da página --- */
+.labTop{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:18px 0 16px}
+.labTop .tit h2{font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.labTop .tit .sub{font-size:13px;color:var(--ink-soft);margin-top:3px}
+.labTop .acts{display:flex;gap:8px;align-items:center}
+
+/* --- resumo em linha: compacto, sem os quatro blocos gigantes --- */
+.labResumo{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.rItem{display:flex;align-items:center;gap:9px;padding:9px 14px;border-radius:12px;
+  background:var(--surface-2);border:1px solid var(--line);min-width:0}
+.rItem .rV{font-variant-numeric:tabular-nums;font-size:19px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.rItem .rT{font-size:12px;color:var(--ink-soft);font-weight:600;white-space:nowrap}
+.rItem.zero{opacity:.62}
+.rItem.alerta{background:color-mix(in srgb,var(--stop) 12%,transparent);border-color:color-mix(in srgb,var(--stop) 34%,transparent)}
+.rItem.alerta .rV,.rItem.alerta .rT{color:var(--stop)}
+.rItem.bom{background:color-mix(in srgb,var(--go) 12%,transparent);border-color:color-mix(in srgb,var(--go) 30%,transparent)}
+.rItem.bom .rV{color:var(--go-ink)}
+
+/* --- kanban --- */
+.kanban{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 14px;scroll-snap-type:x proximity}
+.kanban::-webkit-scrollbar{height:8px}
+.kanban::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:99px}
+.kanban::-webkit-scrollbar-track{background:transparent}
+.kanCol{flex:0 0 252px;scroll-snap-align:start;background:transparent;border:none;border-radius:0;
+  padding:0;display:flex;flex-direction:column;gap:9px;min-height:0}
+.colHead{display:flex;align-items:center;gap:8px;padding:0 3px 9px;
+  border-bottom:2px solid var(--line-2);margin-bottom:2px}
+.kanCol[data-n="0"] .colHead{opacity:.55}
+.colHead .dot{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 14%,transparent)}
+.colHead .cn{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);flex:1}
+.colHead .cc{font-variant-numeric:tabular-nums;font-size:11px;font-weight:700;background:var(--surface-3);
+  border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--ink-soft);min-width:22px;text-align:center}
+
+/* coluna vazia: contorno tracejado discreto no lugar do travessão */
+.colVazia{border:1.5px dashed var(--line-2);border-radius:13px;padding:18px 12px;text-align:center;
+  font-size:11.5px;color:var(--ink-faint);line-height:1.5}
+
+/* --- estado inicial: sem nenhuma OS --- */
+.labZero{border:1.5px dashed var(--line-2);border-radius:20px;padding:52px 28px;text-align:center;
+  background:linear-gradient(180deg,var(--surface-2),transparent)}
+.labZero .ic{font-size:44px;line-height:1;margin-bottom:14px;opacity:.85}
+.labZero h3{font-size:19px;font-weight:700;letter-spacing:-.01em}
+.labZero p{font-size:13.5px;color:var(--ink-soft);max-width:430px;margin:8px auto 0;line-height:1.6}
+.labZero .fluxo{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap;margin:22px 0 24px}
+.labZero .fluxo span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 11px}
+.labZero .fluxo i{color:var(--ink-faint);font-style:normal;font-size:12px}
+
+@media(max-width:640px){
+  .labTop{align-items:stretch}
+  .labTop .acts{width:100%}
+  .labTop .acts .btn{flex:1;justify-content:center}
+  .rItem{flex:1 1 calc(50% - 5px);justify-content:center}
+  .labZero{padding:40px 20px}
+}
