@@ -18,11 +18,19 @@
 <main class="wrap">
   <div id="loading" class="loadWrap"><div class="spinner"></div><div>Carregando o laboratório…</div></div>
   <div id="appBody" style="display:none;padding-top:16px">
-    <div class="labHead">
-      <div class="kpis" id="labKpis" style="flex:1;margin:0"></div>
-      <button class="btn primary" id="btnNovaOS"><span>+ Nova OS</span></button>
+    <div class="labTop">
+      <div class="tit">
+        <h2>Laboratório</h2>
+        <div class="sub" id="labSub">Acompanhe cada óculos até a entrega</div>
+      </div>
+      <div class="acts">
+        <button class="btn ghost sm" id="btnFiltroAtraso" title="Mostrar apenas as atrasadas">⚠ Atrasadas</button>
+        <button class="btn primary" id="btnNovaOS"><span>+ Nova OS</span></button>
+      </div>
     </div>
+    <div class="labResumo" id="labKpis"></div>
     <div class="kanban" id="kanban"></div>
+    <div id="labVazio" style="display:none"></div>
   </div>
 </main>
 
