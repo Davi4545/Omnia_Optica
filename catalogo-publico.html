@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Catálogo</title>
+<meta name="theme-color" content="#eef1f6"/>
+<meta name="description" content="Catálogo de óculos, armações e lentes."/>
+<link rel="icon" href="icon.svg" type="image/svg+xml"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/omnia.css"/>
+</head>
+<body data-theme="refracao">
+<header class="pubHead">
+  <div class="wrap">
+    <div class="topbar" style="border:none;padding:14px 0">
+      <div class="brand">
+        <div class="logoLens" id="pubLogo" aria-hidden="true"></div>
+        <div><h1 id="pubLoja">Catálogo</h1><div class="sub" id="pubSub">Escolha os modelos e envie sua lista</div></div>
+      </div>
+      <button class="btn primary" id="pubCarrinho" style="position:relative">
+        🛒 Minha lista <span id="pubBadge" class="cartBadge" style="display:none">0</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" style="padding-bottom:90px">
+  <div id="pubLoading" class="loadWrap"><div class="spinner"></div><div>Carregando catálogo…</div></div>
+
+  <div id="pubBody" style="display:none">
+    <div class="tools" style="margin:18px 0">
+      <input class="search" id="pubBusca" placeholder="Buscar modelo…" style="flex:1"/>
+      <select id="pubCat" style="padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:14px"></select>
+    </div>
+    <div id="pubGrid" class="prodGrid"></div>
+  </div>
+</main>
+
+<!-- lista do cliente -->
+<div class="modalBack" id="pubBack">
+  <div class="modal">
+    <div class="modalHead"><h3>Minha lista</h3><button class="btn ghost icon" data-close="pubBack">✕</button></div>
+    <div class="modalBody">
+      <div class="field"><label>Seu nome</label><input id="pubNome" placeholder="Como podemos te chamar?"/></div>
+      <div id="pubItens" style="margin:14px 0"></div>
+      <div id="pubTotal" style="font-weight:700;font-size:16px;text-align:right;margin-bottom:10px"></div>
+      <div class="hint" style="margin-bottom:10px">Ao enviar, abrimos o WhatsApp com a sua lista pronta. Nada é cobrado aqui.</div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn ghost sm" id="pubLimpar">Limpar</button>
+        <button class="btn wa" id="pubEnviar">📲 Enviar pelo WhatsApp</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/app-catalogo-publico.js"></script>
+<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js");</script></body>
+</html>
