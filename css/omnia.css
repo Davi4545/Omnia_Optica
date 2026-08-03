@@ -490,3 +490,10 @@ tr.clickRow:hover td{background:var(--surface-2)}
 .btn.icon.danger{color:var(--ink-faint);border-color:var(--line)}
 .btn.icon.danger:hover{color:var(--stop);border-color:color-mix(in srgb,var(--stop) 45%,transparent);
   background:color-mix(in srgb,var(--stop) 12%,transparent)}
+
+/* ---------- Aviso de falha ao salvar (não some sozinho) ---------- */
+.barraErro{position:sticky;bottom:0;left:0;right:0;z-index:60;display:flex;align-items:center;gap:14px;
+  flex-wrap:wrap;padding:13px 18px;background:color-mix(in srgb,var(--stop) 16%,var(--surface));
+  border-top:2px solid var(--stop);box-shadow:var(--shadow-2)}
+.barraErro b{font-size:13.5px;color:var(--stop)}
+.barraErro span{flex:1;min-width:200px;font-size:12.5px;color:var(--ink-soft);line-height:1.5}
