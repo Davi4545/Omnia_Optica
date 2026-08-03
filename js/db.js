@@ -196,6 +196,35 @@ export async function getLojaPublica(storeId) {
   return s.exists() ? { id: storeId, name: s.data().name || "", logo: s.data().logo || "" } : null;
 }
 
+// ---------- EXCLUSÕES ----------
+// Excluir o perfil do usuário. IMPORTANTE: isto NÃO remove a credencial do
+// Firebase Auth — a pessoa ainda consegue autenticar, só fica sem perfil.
+// Por isso a interface desativa antes de excluir.
+export async function deleteUserProfile(uid) {
+  await deleteDoc(doc(db, "users", uid));
+}
+
+// O Firestore NÃO apaga subcoleções junto com o documento pai.
+// Sem isto, apagar a loja deixaria vendas, clientes e OS órfãos no banco,
+// invisíveis na interface mas ocupando espaço e ainda legíveis pela API.
+export async function excluirLojaCompleta(storeId, aoProgredir) {
+  const partes = ["app", "records", "clientes", "ponto", "pontoConfig",
+                  "produtos", "comissaoConfig", "vendedores"];
+  let apagados = 0, falhas = 0;
+  for (const nome of partes) {
+    if (aoProgredir) aoProgredir(nome);
+    try {
+      const qs = await getDocs(col(storeId, nome));
+      for (const d of qs.docs) {
+        try { await deleteDoc(d.ref); apagados++; } catch (_) { falhas++; }
+      }
+    } catch (_) { falhas++; }
+  }
+  if (aoProgredir) aoProgredir("a ótica");
+  await deleteDoc(doc(db, "stores", storeId));
+  return { apagados, falhas };
+}
+
 // ---------- BACKUP ----------
 // Lê tudo de uma loja para exportação. Usado no painel de gestão.
 export async function exportarLoja(storeId) {
