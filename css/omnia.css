@@ -497,3 +497,23 @@ tr.clickRow:hover td{background:var(--surface-2)}
   border-top:2px solid var(--stop);box-shadow:var(--shadow-2)}
 .barraErro b{font-size:13.5px;color:var(--stop)}
 .barraErro span{flex:1;min-width:200px;font-size:12.5px;color:var(--ink-soft);line-height:1.5}
+
+/* ---------- Receitas no CRM ---------- */
+.rxTopo{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.tabs .cc{font-variant-numeric:tabular-nums;font-size:10.5px;font-weight:700;background:var(--surface-3);
+  border:1px solid var(--line);border-radius:999px;padding:1px 7px;margin-left:6px;color:var(--ink-soft)}
+.rxCard{border:1px solid var(--line);border-radius:13px;padding:13px 15px;margin-bottom:10px;background:var(--surface)}
+.rxCard.atual{border-color:color-mix(in srgb,var(--go) 42%,transparent);
+  background:color-mix(in srgb,var(--go) 6%,var(--surface))}
+.rxHead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:9px}
+.rxHead b{font-size:13.5px;font-variant-numeric:tabular-nums;margin-right:7px}
+.rxActs{display:flex;gap:6px}
+.rxView{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.rxView th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-faint);
+  font-weight:700;padding:3px 6px;text-align:center;border-bottom:1px solid var(--line-2)}
+.rxView td{font-size:13px;padding:5px 6px;text-align:center;color:var(--ink)}
+.rxView td.ol{font-weight:700;color:var(--ink-soft);text-align:left;width:34px}
+.rxMed{font-size:11.5px;color:var(--ink-soft);margin-top:7px}
+.rxCel{display:flex;flex-direction:column;gap:1px}
+.rxCel .g{font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:600}
+.rxCel .d{font-size:10.5px;color:var(--ink-faint)}
