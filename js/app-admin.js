@@ -1,7 +1,8 @@
 import { initShell, enviarResetSenha } from "./session.js";
 import {
   getStore, listStores, createStore, updateStore, listUsersByStore, listAllUsers,
-  updateUserProfile, setStoreCode, deleteStoreCode, normalizeCode, subscribeState,
+  updateUserProfile, deleteUserProfile, excluirLojaCompleta,
+  setStoreCode, deleteStoreCode, normalizeCode, subscribeState,
   exportarLoja, saveState, addRecord, saveCliente, saveOS, savePonto, saveProduto, saveFaixas
 } from "./db.js";
 import {
@@ -238,6 +239,42 @@ async function resetarSenha() {
   catch (e) { console.error(e); toast("Não foi possível enviar o link."); }
 }
 
+async function excluirUsuario() {
+  const uidAlvo = $("u_uid").value;
+  const u = usuarios.find((x) => x.uid === uidAlvo); if (!u) return;
+  if (u.uid === EU) { toast("Você não pode excluir a própria conta."); return; }
+  if (u.role === "superadmin") { toast("O super admin não pode ser excluído aqui."); return; }
+
+  // A credencial do Firebase Auth não é removida daqui — o app não tem esse poder.
+  // Desativamos antes de excluir para que a pessoa perca o acesso de fato.
+  const ok1 = confirm(
+    `Excluir ${u.name || u.email}?\n\n` +
+    `• O acesso é cortado imediatamente.\n` +
+    `• O histórico de vendas dele continua nos relatórios.\n` +
+    `• O login no Firebase Authentication precisa ser removido à parte, no Console.\n\n` +
+    `Se a pessoa só saiu de férias ou trocou de loja, prefira "Inativo" — dá para reverter.`
+  );
+  if (!ok1) return;
+
+  try {
+    // 1) desativa (é isto que efetivamente bloqueia o acesso pelas regras)
+    await updateUserProfile(uidAlvo, { active: false });
+    // 2) remove o perfil
+    await deleteUserProfile(uidAlvo);
+    usuarios = usuarios.filter((x) => x.uid !== uidAlvo);
+    closeModal("userBack"); renderUsuarios();
+    toast("Usuário excluído. Remova o login no Console do Firebase.");
+  } catch (e) {
+    console.error(e);
+    if (e.code === "permission-denied") {
+      // desativar já resolve o acesso; avisamos o que aconteceu de fato
+      toast("Sem permissão para excluir. O usuário foi apenas desativado.");
+      const u2 = usuarios.find((x) => x.uid === uidAlvo); if (u2) u2.active = false;
+      closeModal("userBack"); renderUsuarios();
+    } else toast("Falha ao excluir.");
+  }
+}
+
 /* ================= BACKUP ================= */
 function nomeArquivo(sufixo, ext) {
   const l = (loja && loja.name ? loja.name : "otica").toLowerCase()
@@ -319,10 +356,51 @@ async function carregarLojas() {
       <td><b>${esc(l.name || "—")}</b><div class="tiny" style="text-transform:none;letter-spacing:0">${esc(l.id)}</div></td>
       <td class="mono">${esc(l.code || "—")}</td>
       <td class="num">${num(usuarios.filter((u) => u.storeId === l.id).length)}</td>
-      <td><button class="btn ghost sm" data-abrir="${esc(l.id)}">${l.id === STORE ? "Atual" : "Abrir"}</button></td>
+      <td><div class="rowActs">
+        <button class="btn ghost sm" data-abrir="${esc(l.id)}">${l.id === STORE ? "Atual" : "Abrir"}</button>
+        ${l.id === STORE ? "" : `<button class="btn ghost sm icon danger" data-delloja="${esc(l.id)}" title="Excluir ótica" aria-label="Excluir ${esc(l.name || l.id)}">🗑</button>`}
+      </div></td>
     </tr>`).join("")}
   </tbody></table>`;
 }
+async function excluirLoja(id) {
+  const l = lojas.find((x) => x.id === id); if (!l) return;
+  if (id === STORE) { toast("Não dá para excluir a ótica que você está usando. Abra outra antes."); return; }
+
+  const nUsers = usuarios.filter((u) => u.storeId === id).length;
+  const aviso =
+    `EXCLUIR A ÓTICA "${l.name}"\n\n` +
+    `Isto apaga em definitivo:\n` +
+    `• todas as vendas e atendimentos\n` +
+    `• todos os clientes do CRM\n` +
+    `• todas as OS de laboratório\n` +
+    `• ponto, catálogo e configurações\n\n` +
+    (nUsers ? `${nUsers} usuário(s) ficam sem ótica e perdem o acesso.\n\n` : "") +
+    `NÃO TEM COMO DESFAZER.\n\n` +
+    `Faça um backup antes (aba Backup). Continuar?`;
+  if (!confirm(aviso)) return;
+
+  const digitado = prompt(`Para confirmar, digite o nome exato da ótica:\n\n${l.name}`);
+  if (digitado === null) return;
+  if (digitado.trim() !== l.name.trim()) { toast("O nome não confere. Nada foi excluído."); return; }
+
+  const box = $("lojasBox");
+  box.innerHTML = `<div class="loadWrap"><div class="spinner"></div><div id="delStatus">Excluindo…</div></div>`;
+  try {
+    const r = await excluirLojaCompleta(id, (parte) => {
+      const el = $("delStatus"); if (el) el.textContent = "Excluindo " + parte + "…";
+    });
+    if (l.code) await deleteStoreCode(l.code).catch(() => {});
+    lojas = lojas.filter((x) => x.id !== id);
+    await carregarLojas();
+    toast(`Ótica excluída · ${r.apagados} registro(s) removido(s)` + (r.falhas ? ` · ${r.falhas} falha(s)` : ""));
+  } catch (e) {
+    console.error(e);
+    await carregarLojas();
+    toast(e.code === "permission-denied" ? "Sem permissão. Só o super admin exclui óticas." : "Falha ao excluir a ótica.");
+  }
+}
+
 async function criarLoja() {
   const nome = $("nl_nome").value.trim();
   const code = normalizeCode($("nl_code").value);
@@ -377,6 +455,7 @@ function wireEvents() {
   });
   $("u_stores").addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (c) c.classList.toggle("on"); });
   $("btnSalvarUser").addEventListener("click", salvarUsuario);
+  $("btnExcluirUser").addEventListener("click", excluirUsuario);
   $("btnResetSenha").addEventListener("click", resetarSenha);
 
   $("btnBackupJson").addEventListener("click", backupJson);
@@ -386,6 +465,7 @@ function wireEvents() {
   $("btnNovaLoja").addEventListener("click", () => openModal("lojaBack"));
   $("btnCriarLoja").addEventListener("click", criarLoja);
   $("lojasBox").addEventListener("click", (e) => {
+    const d = e.target.closest("[data-delloja]"); if (d) { e.stopPropagation(); excluirLoja(d.dataset.delloja); return; }
     const b = e.target.closest("[data-abrir]");
     if (b) { localStorage.setItem("omnia_store", b.dataset.abrir); location.reload(); }
   });
