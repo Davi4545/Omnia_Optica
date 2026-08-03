@@ -51,22 +51,61 @@ function reveal() { $("loading").style.display = "none"; $("appBody").style.disp
 // Gravação agrupada: várias ações seguidas viram uma escrita só.
 // Evita rajadas de writes (custo no Firestore) e corridas entre dispositivos.
 let persistTimer = null, persistPend = false;
+
+// Movimentos de fila podem esperar (agrupa rajadas de cliques).
 function persist() {
   if (aplicandoRemoto) return;
   persistPend = true;
   clearTimeout(persistTimer);
   persistTimer = setTimeout(flush, 400);
 }
+
+// Cadastro/remoção de consultor e meta NÃO podem esperar: se a pessoa fechar
+// a aba antes do debounce, o dado se perde. Aqui gravamos na hora e só
+// confirmamos depois que o banco aceitou.
+async function persistJa(msgOk) {
+  if (aplicandoRemoto) return false;
+  clearTimeout(persistTimer);
+  persistPend = false;
+  try {
+    await saveState(STORE, state);
+    if (msgOk) toast(msgOk);
+    return true;
+  } catch (e) {
+    console.error("saveState", e);
+    falhaAoSalvar(e);
+    return false;
+  }
+}
+
 async function flush() {
   if (!persistPend) return;
   persistPend = false;
   try { await saveState(STORE, state); }
-  catch (e) {
-    console.error("saveState", e);
-    toast(e && e.code === "permission-denied"
-      ? "Sem permissão para salvar. Confira as regras do Firestore."
-      : "Falha ao salvar. Verifique a conexão.");
+  catch (e) { console.error("saveState", e); falhaAoSalvar(e); }
+}
+
+// Aviso que NÃO some sozinho: perder cadastro em silêncio é inaceitável.
+function falhaAoSalvar(e) {
+  const negado = e && e.code === "permission-denied";
+  let box = $("erroSalvar");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "erroSalvar";
+    box.className = "barraErro";
+    document.body.appendChild(box);
   }
+  box.innerHTML = `<b>Não foi possível salvar</b>
+    <span>${negado
+      ? "O banco recusou a gravação. Confira as regras do Firestore e se o seu usuário tem acesso a esta ótica."
+      : "Verifique a conexão. O que você fez ainda não foi gravado."}</span>
+    <button class="btn ghost sm" id="btnTentarSalvar">Tentar de novo</button>`;
+  box.style.display = "flex";
+  const b = $("btnTentarSalvar");
+  if (b) b.addEventListener("click", async () => {
+    const ok = await persistJa("Salvo ✓");
+    if (ok) box.style.display = "none";
+  });
 }
 // Garante a gravação se o usuário fechar a aba no meio
 window.addEventListener("beforeunload", () => { if (persistPend) flush(); });
@@ -331,12 +370,17 @@ function abrirSeller(id) {
   $("btnDeleteSeller").style.display = s ? "inline-flex" : "none";
   openModal("sellerBack");
 }
-function salvarSeller() {
+async function salvarSeller() {
   const nome = $("sellerName").value.trim(); if (!nome) { toast("Digite o nome."); return; }
   const id = $("sellerEditId").value;
+  const btn = $("btnSaveSeller");
   if (id) { const s = seller(id); if (s) { s.nome = nome; s.foto = fotoTemp; } }
   else { const ns = { id: uid(), nome, foto: fotoTemp, ativo: true }; state.sellers.push(ns); state.fora.push(ns.id); }
-  closeModal("sellerBack"); render(); persist(); toast("Consultor salvo ✓");
+  render();
+  if (btn) { btn.disabled = true; btn.innerHTML = "<span>Salvando…</span>"; }
+  const ok = await persistJa("Consultor salvo ✓");
+  if (btn) { btn.disabled = false; btn.innerHTML = "<span>Salvar</span>"; }
+  if (ok) closeModal("sellerBack"); // só fecha se realmente gravou
 }
 function removerSeller() {
   const id = $("sellerEditId").value; if (!id) return;
@@ -345,7 +389,7 @@ function removerSeller() {
   state.fila = state.fila.filter((x) => x !== id);
   state.fora = state.fora.filter((x) => x !== id);
   state.foco = state.foco.filter((f) => f.sellerId !== id);
-  closeModal("sellerBack"); render(); persist(); toast("Consultor removido.");
+  closeModal("sellerBack"); render(); persistJa("Consultor removido.");
 }
 
 // ---------- metas ----------
@@ -489,7 +533,7 @@ function wireEvents() {
     const f = e.target.files && e.target.files[0]; if (!f) return;
     try { fotoTemp = await comprimirImagem(f); const p = $("sellerPhotoPrev"); p.src = fotoTemp; p.style.display = "block"; } catch (_) { toast("Não deu para ler a imagem."); }
   });
-  $("btnSaveMeta").addEventListener("click", () => { state.metaMes[monthKey()] = brNum($("metaInput").value); render(); persist(); toast("Meta salva ✓"); });
+  $("btnSaveMeta").addEventListener("click", () => { state.metaMes[monthKey()] = brNum($("metaInput").value); render(); persistJa("Meta salva ✓"); });
   $("seloSeller").addEventListener("change", renderConquistas);
   $("btnExport").addEventListener("click", exportCSV);
 
