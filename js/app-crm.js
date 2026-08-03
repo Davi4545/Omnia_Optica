@@ -46,7 +46,10 @@ function render() {
         <td class="num">${money(totalGasto(c))}</td>
         <td class="${late ? "late" : ""}">${c.proximoRetorno ? fmtData(c.proximoRetorno) : "—"}${late ? " ⚠" : ""}</td>
         <td>${esc(c.ownerNome || "—")}</td>
-        <td><button class="btn wa sm" data-wa="${esc(c.id)}">WhatsApp</button></td></tr>`;
+        <td><div class="rowActs">
+          <button class="btn wa sm" data-wa="${esc(c.id)}">WhatsApp</button>
+          ${PODE_APAGAR ? `<button class="btn ghost sm icon danger" data-del="${esc(c.id)}" title="Excluir cliente" aria-label="Excluir ${esc(c.nome)}">🗑</button>` : ""}
+        </div></td></tr>`;
     }).join("")}</tbody></table>`;
 }
 
@@ -79,6 +82,22 @@ async function salvar() {
   try { await saveCliente(STORE, c); } catch (e) { toast("Falha ao salvar."); return; }
   closeModal("cliBack"); toast("Cliente salvo ✓");
 }
+// Exclusão a partir da lista. O aviso menciona o histórico porque as vendas
+// ficam em "records" e continuam lá — some o cadastro, não o faturamento.
+async function excluirDaLista(id) {
+  const c = clientes.find((x) => x.id === id); if (!c) return;
+  const n = (c.compras || []).length;
+  const aviso = n
+    ? `Excluir ${c.nome}?\n\n${n} compra(s) registrada(s) somem do cadastro dele. As vendas continuam nos relatórios.`
+    : `Excluir ${c.nome}?`;
+  if (!confirm(aviso)) return;
+  try { await deleteCliente(STORE, id); toast("Cliente excluído."); }
+  catch (e) {
+    console.error(e);
+    toast(e.code === "permission-denied" ? "Sem permissão para excluir." : "Falha ao excluir.");
+  }
+}
+
 async function remover() { const id = $("cli_id").value; if (!id) return; if (!confirm("Excluir este cliente?")) return; try { await deleteCliente(STORE, id); } catch (e) { toast("Falha ao excluir."); return; } closeModal("cliBack"); toast("Cliente excluído."); }
 function wa(id) { const c = clientes.find((x) => x.id === id); if (!c) return; window.open(waLink(c.telefone, `Olá ${primeiroNome(c.nome)}! Aqui é da ${STORE_NAME}. Tudo bem?`), "_blank"); }
 
@@ -86,6 +105,7 @@ function wireEvents() {
   $("btnNovoCliente").addEventListener("click", () => abrir(null));
   $("cliSearch").addEventListener("input", (e) => { busca = e.target.value; render(); });
   $("cliTable").addEventListener("click", (e) => {
+    const d = e.target.closest("[data-del]"); if (d) { e.stopPropagation(); excluirDaLista(d.dataset.del); return; }
     const w = e.target.closest("[data-wa]"); if (w) { e.stopPropagation(); wa(w.dataset.wa); return; }
     const row = e.target.closest("[data-cli]"); if (row) abrir(row.dataset.cli);
   });
