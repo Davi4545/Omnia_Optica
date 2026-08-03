@@ -349,6 +349,33 @@ async function crmUpsertVenda(rec) {
   c.compras = c.compras || [];
   c.compras.push({ valor: rec.valor || 0, desc: (rec.produto || "Venda") + (rec.lente && rec.lente !== "Não se aplica" ? " · " + rec.lente : ""), ts: Date.now() });
   c.ultimaCompraTs = Date.now(); c.etapa = "fechado";
+
+  // Histórico de receitas: o grau muda com o tempo, então guardamos cada uma
+  // com data em vez de sobrescrever. É o que permite comparar a evolução.
+  if (rec.receita || rec.receitaFoto) {
+    c.receitas = c.receitas || [];
+    c.receitas.push({
+      id: "rx_" + uid(),
+      data: dateKey(),
+      ts: Date.now(),
+      od: (rec.receita && rec.receita.od) || null,
+      oe: (rec.receita && rec.receita.oe) || null,
+      medico: (rec.receita && rec.receita.medico) || "",
+      cro: (rec.receita && rec.receita.cro) || "",
+      foto: rec.receitaFoto || "",
+      origem: "venda",
+      sellerNome: s ? s.nome : ""
+    });
+    // mantém no máximo 12 receitas por cliente — o documento tem limite de 1 MB
+    // e fotos ocupam espaço; as mais antigas perdem a foto, mas o grau fica.
+    if (c.receitas.length > 12) {
+      c.receitas = c.receitas.slice(-12);
+    }
+    let peso = c.receitas.filter((r) => r.foto).length;
+    for (let i = 0; i < c.receitas.length - 1 && peso > 3; i++) {
+      if (c.receitas[i].foto) { c.receitas[i].foto = ""; c.receitas[i].fotoRemovida = true; peso--; }
+    }
+  }
   if (rec.clienteTel && !c.telefone) c.telefone = rec.clienteTel; // não sobrescreve o que já existe
   if (!c.ownerId) { c.ownerId = rec.sellerId; c.ownerNome = s ? s.nome : ""; }
   if (grau) c.proximoRetorno = dplus(365);
