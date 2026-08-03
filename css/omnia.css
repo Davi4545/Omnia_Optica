@@ -459,3 +459,28 @@ tr.clickRow:hover td{background:var(--surface-2)}
   .rItem{flex:1 1 calc(50% - 5px);justify-content:center}
   .labZero{padding:40px 20px}
 }
+
+/* ---------- Formulário de venda: seções, receita e anexo ---------- */
+.secLinha{display:flex;align-items:center;gap:9px;margin:16px 0 10px;font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.06em;color:var(--iris)}
+.secLinha::after{content:"";flex:1;height:1px;background:var(--line-2)}
+.secLinha .op{font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink-faint);font-size:11px}
+.rxMini{background:var(--surface-2);border:1px solid var(--line);border-radius:13px;padding:12px}
+.rxMini .rxTable{border-spacing:4px 5px}
+.rxMini .rxTable input{padding:7px 3px;font-size:12.5px}
+.rxMini .rxNote{margin-top:4px}
+
+.anexo{margin-top:10px}
+.anexoBtn{display:flex;align-items:center;gap:11px;padding:12px 14px;border-radius:12px;cursor:pointer;
+  border:1.5px dashed var(--line-2);background:var(--surface);transition:.16s}
+.anexoBtn:hover{border-color:var(--iris);background:var(--surface-3)}
+.anexoBtn .ic{font-size:19px;line-height:1}
+.anexoBtn b{display:block;font-size:13px;font-weight:600}
+.anexoBtn small{display:block;font-size:11.5px;color:var(--ink-faint);margin-top:1px}
+.anexoPrev{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:12px;
+  border:1px solid var(--line);background:var(--surface)}
+.anexoPrev img{width:52px;height:52px;object-fit:cover;border-radius:9px;border:1px solid var(--line-2);flex:none}
+.anexoInfo{flex:1;min-width:0}
+.anexoInfo b{display:block;font-size:13px;font-weight:600;color:var(--go-ink)}
+.anexoInfo small{display:block;font-size:11px;color:var(--ink-faint);font-variant-numeric:tabular-nums;margin-top:1px}
+.anexoActs{display:flex;gap:6px;flex:none}
