@@ -30,7 +30,11 @@
 <div class="modalBack" id="cliBack">
   <div class="modal">
     <div class="modalHead"><h3 id="cliTitle">Novo cliente</h3><button class="btn ghost icon" data-close="cliBack">✕</button></div>
-    <div class="modalBody">
+    <div class="tabs" id="cliTabs" style="margin:0 20px">
+      <button class="tab active" data-cliaba="dados">Dados</button>
+      <button class="tab" data-cliaba="receitas">Receitas <span class="cc" id="rxCount">0</span></button>
+    </div>
+    <div class="modalBody" id="cliAbaDados">
       <input type="hidden" id="cli_id"/>
       <div class="frow"><div class="field"><label>Nome</label><input id="cli_nome" placeholder="Nome"/></div>
         <div class="field"><label>Telefone</label><input id="cli_tel" inputmode="tel" placeholder="(00) 00000-0000"/></div></div>
@@ -45,6 +49,60 @@
         <button class="btn wa sm" id="btnWaCli">WhatsApp</button>
         <button class="btn ghost sm" data-close="cliBack">Cancelar</button>
         <button class="btn primary sm" id="btnSaveCli"><span>Salvar</span></button>
+      </div>
+    </div>
+
+    <!-- ABA: receitas do cliente -->
+    <div class="modalBody" id="cliAbaReceitas" style="display:none">
+      <div class="rxTopo">
+        <div class="hint">O grau muda com o tempo. Cada receita fica guardada com a data.</div>
+        <button class="btn primary sm" id="btnNovaRx"><span>+ Nova receita</span></button>
+      </div>
+      <div id="rxLista"></div>
+
+      <!-- formulário de nova receita -->
+      <div id="rxForm" style="display:none">
+        <div class="divider"></div>
+        <div class="sectionLabel">Nova receita</div>
+        <table class="rxTable"><thead><tr><th></th><th>Esférico</th><th>Cilíndrico</th><th>Eixo</th><th>DNP</th><th>Adição</th></tr></thead>
+          <tbody>
+            <tr><td>OD</td>
+              <td><input id="nrx_od_esf" inputmode="decimal" placeholder="0,00"/></td>
+              <td><input id="nrx_od_cil" inputmode="decimal" placeholder="0,00"/></td>
+              <td><input id="nrx_od_eixo" inputmode="numeric" placeholder="0°"/></td>
+              <td><input id="nrx_od_dnp" inputmode="decimal" placeholder="mm"/></td>
+              <td><input id="nrx_od_add" inputmode="decimal" placeholder="0,00"/></td></tr>
+            <tr><td>OE</td>
+              <td><input id="nrx_oe_esf" inputmode="decimal" placeholder="0,00"/></td>
+              <td><input id="nrx_oe_cil" inputmode="decimal" placeholder="0,00"/></td>
+              <td><input id="nrx_oe_eixo" inputmode="numeric" placeholder="0°"/></td>
+              <td><input id="nrx_oe_dnp" inputmode="decimal" placeholder="mm"/></td>
+              <td><input id="nrx_oe_add" inputmode="decimal" placeholder="0,00"/></td></tr>
+          </tbody></table>
+        <div class="frow3" style="margin-top:8px">
+          <div class="field"><label>Médico / optometrista</label><input id="nrx_medico" placeholder="Dr(a)."/></div>
+          <div class="field" style="max-width:130px"><label>CRM/CRO</label><input id="nrx_cro" placeholder="—"/></div>
+          <div class="field" style="max-width:150px"><label>Data da receita</label><input id="nrx_data" type="date"/></div>
+        </div>
+        <div class="anexo">
+          <label class="anexoBtn" id="nrx_fotoBtn" for="nrx_foto">
+            <span class="ic">📎</span>
+            <span><b>Anexar foto da receita</b><small>Guarda a receita original no cadastro</small></span>
+          </label>
+          <input type="file" id="nrx_foto" accept="image/*" capture="environment" hidden/>
+          <div class="anexoPrev" id="nrx_fotoPrev" style="display:none">
+            <img id="nrx_fotoImg" alt="Receita"/>
+            <div class="anexoInfo"><b>Receita anexada</b><small id="nrx_fotoInfo"></small></div>
+            <div class="anexoActs">
+              <button type="button" class="btn ghost sm" id="nrx_fotoVer">Ver</button>
+              <button type="button" class="btn ghost sm icon" id="nrx_fotoDel" title="Remover">✕</button>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+          <button class="btn ghost sm" id="btnCancelarRx">Cancelar</button>
+          <button class="btn go sm" id="btnSalvarRx">Salvar receita</button>
+        </div>
       </div>
     </div>
   </div>
