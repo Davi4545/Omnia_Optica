@@ -59,10 +59,14 @@ async function resolveStoreId(profile) {
   // respeita a loja escolhida no seletor, desde que o usuário tenha acesso
   if (saved && (permitidas.includes(saved) || profile.role === "superadmin")) return saved;
   if (profile.storeId) return profile.storeId;
-  if (saved) return saved;
   if (Array.isArray(profile.storeIds) && profile.storeIds.length) return profile.storeIds[0];
   if (profile.role === "superadmin") {
-    const stores = await listStores();
+    // Sem loja definida, o super admin caía em listStores()[0] — e o Firestore
+    // NÃO garante ordem. Em outro dispositivo (ou após limpar o navegador) ele
+    // abria uma ótica diferente e parecia que os dados tinham sumido.
+    // Ordenamos por nome para a escolha ser sempre a mesma.
+    const stores = (await listStores()).sort((a, b) =>
+      (a.name || a.id).localeCompare(b.name || b.id, "pt-BR"));
     if (stores[0]) return stores[0].id;
   }
   return null;
@@ -139,11 +143,18 @@ export function initShell(activeKey) {
         return;
       }
 
+      const admin_temStoreIdFixo = !!profile.storeId;
       const storeId = await resolveStoreId(profile);
       if (!storeId) { renderNoStore(); return; }
 
       localStorage.setItem("omnia_store", storeId);
       DIAG.storeId = storeId;
+      // Se o perfil não tem loja fixa, grava a escolha para as próximas sessões
+      // usarem exatamente a mesma — evita "meus dados sumiram" ao trocar de máquina.
+      if (!profile.storeId && admin_temStoreIdFixo === false) {
+        updateUserProfile(user.uid, { storeId }).catch(() => {});
+        profile.storeId = storeId;
+      }
       if (profile) DIAG.papel = profile.role || "seller";
       let store = null;
       try { store = await getStore(storeId); } catch (e) { store = null; }
